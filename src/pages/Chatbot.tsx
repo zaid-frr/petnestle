@@ -6,8 +6,9 @@ import { GoogleGenAI } from "@google/genai";
 let aiClient: GoogleGenAI | null = null;
 const getAIClient = () => {
   if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
+    // @ts-ignore - Handle both Vite's import.meta.env and Node's process.env
+    const apiKey = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) || process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === 'undefined' || apiKey === 'null' || apiKey === '') {
       console.error("GEMINI_API_KEY is missing. Chatbot will not work.");
       return null;
     }
@@ -60,7 +61,7 @@ export default function Chatbot() {
     try {
       const client = getAIClient();
       if (!client) {
-        throw new Error("API key is missing");
+        throw new Error("API_KEY_MISSING");
       }
       
       const response = await client.models.generateContent({
@@ -79,13 +80,20 @@ export default function Chatbot() {
           sender: "bot",
         },
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Gemini API Error:", error);
+      
+      let errorMessage = "Oops! I'm having trouble connecting to my brain right now. Please try again later.";
+      
+      if (error.message === "API_KEY_MISSING" || (error.message && error.message.includes("API key"))) {
+        errorMessage = "Configuration Error: The Gemini API Key is missing. If you are on Vercel, please make sure you added GEMINI_API_KEY to your Environment Variables and **you must trigger a new deployment** for it to take effect.";
+      }
+      
       setMessages((prev) => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
-          text: "Oops! I'm having trouble connecting to my brain right now. Please try again later.",
+          text: errorMessage,
           sender: "bot",
         },
       ]);
