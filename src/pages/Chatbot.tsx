@@ -2,7 +2,19 @@ import React, { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Loader2, Sparkles, Activity, Stethoscope, Apple } from "lucide-react";
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Lazy initialize to prevent app crash if env var is missing
+let aiClient: GoogleGenAI | null = null;
+const getAIClient = () => {
+  if (!aiClient) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error("GEMINI_API_KEY is missing. Chatbot will not work.");
+      return null;
+    }
+    aiClient = new GoogleGenAI({ apiKey });
+  }
+  return aiClient;
+};
 
 interface Message {
   id: string;
@@ -46,7 +58,12 @@ export default function Chatbot() {
     setIsLoading(true);
 
     try {
-      const response = await ai.models.generateContent({
+      const client = getAIClient();
+      if (!client) {
+        throw new Error("API key is missing");
+      }
+      
+      const response = await client.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: textToSend,
         config: {
