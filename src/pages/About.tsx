@@ -6,8 +6,18 @@ import { useNotification } from "../context/NotificationContext";
 const defaultTeam = [
   {
     name: "Momin Zaid",
-    role: "Founder & Admin",
+    role: "Lead Developer",
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200&h=200",
+  },
+  {
+    name: "Jahagirdar Fawad",
+    role: "UI/UX Designer",
+    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200&h=200",
+  },
+  {
+    name: "Jahagirdar Shamshoddin",
+    role: "Backend & AI Integration",
+    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200&h=200",
   }
 ];
 
@@ -21,7 +31,17 @@ export default function About() {
   useEffect(() => {
     const storedTeam = localStorage.getItem('petnestle_team');
     if (storedTeam) {
-      setTeam(JSON.parse(storedTeam));
+      try {
+        const parsedTeam = JSON.parse(storedTeam);
+        // Merge stored images with default team to ensure all members are always shown
+        const mergedTeam = defaultTeam.map(defaultMember => {
+          const storedMember = parsedTeam.find((m: any) => m.name === defaultMember.name);
+          return storedMember ? { ...defaultMember, image: storedMember.image } : defaultMember;
+        });
+        setTeam(mergedTeam);
+      } catch (e) {
+        console.error("Failed to parse stored team", e);
+      }
     }
   }, []);
 
