@@ -3,6 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { User, Stethoscope, Dumbbell, Building2, CheckCircle } from 'lucide-react';
+import { auth, db } from '../firebase';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 
 type RoleType = 'petOwners' | 'doctors' | 'trainers' | 'hospitals' | null;
 
@@ -10,6 +13,7 @@ export default function Register() {
   const [selectedRole, setSelectedRole] = useState<RoleType>(null);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const { showNotification } = useNotification();
   const navigate = useNavigate();
@@ -23,43 +27,52 @@ export default function Register() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRole) return;
 
-    // Save to localStorage
-    const existingUsers = JSON.parse(localStorage.getItem(selectedRole) || '[]');
-    const newUser = { ...formData, id: Date.now().toString() };
-    localStorage.setItem(selectedRole, JSON.stringify([...existingUsers, newUser]));
+    setIsLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
 
-    // Show success and login
-    setShowSuccess(true);
-    showNotification('Registration successful!', 'success');
-    
-    const roleMap: Record<string, any> = {
-      petOwners: 'owner',
-      doctors: 'doctor',
-      trainers: 'trainer',
-      hospitals: 'hospital'
-    };
+      const roleMap: Record<string, any> = {
+        petOwners: 'owner',
+        doctors: 'doctor',
+        trainers: 'trainer',
+        hospitals: 'hospital'
+      };
 
-    setTimeout(() => {
-      login({
-        ...newUser,
+      const newUser = {
+        ...formData,
+        uid: user.uid,
+        email: user.email || formData.email,
         role: roleMap[selectedRole],
-        name: newUser.fullName || newUser.hospitalName || 'User',
-        email: newUser.email
-      });
-      navigate('/dashboard');
-    }, 1500);
+        name: formData.fullName || formData.hospitalName || user.displayName || 'User',
+      };
+
+      // Save to Firestore
+      await setDoc(doc(db, 'users', user.uid), newUser);
+
+      setShowSuccess(true);
+      showNotification('Registration successful!', 'success');
+      
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      showNotification(error.message || 'Failed to register', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderFields = () => {
     const commonFields = (
       <>
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label><input required type="email" name="email" onChange={handleChange} className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none" /></div>
         <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number</label><input required type="tel" name="phoneNumber" onChange={handleChange} className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none" /></div>
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label><input required type="password" name="password" onChange={handleChange} className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none" /></div>
       </>
     );
 
@@ -194,8 +207,13 @@ export default function Register() {
                 {renderFields()}
               </div>
               <div className="pt-4">
-                <button type="submit" className="w-full bg-teal-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-teal-700 transition-colors shadow-sm">
-                  Complete Registration
+                <button 
+                  type="submit" 
+                  disabled={isLoading}
+                  className="w-full flex justify-center items-center gap-3 bg-teal-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-teal-700 transition-colors shadow-sm disabled:opacity-50"
+                >
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5 bg-white rounded-full p-0.5" />
+                  {isLoading ? 'Registering...' : 'Complete Registration with Google'}
                 </button>
               </div>
             </form>

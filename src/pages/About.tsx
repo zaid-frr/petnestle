@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { Users, Target, Lightbulb, Camera } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
+import { db } from "../firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const defaultTeam = [
   {
@@ -29,20 +31,22 @@ export default function About() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    const storedTeam = localStorage.getItem('petnestle_team');
-    if (storedTeam) {
+    const fetchTeam = async () => {
       try {
-        const parsedTeam = JSON.parse(storedTeam);
-        // Merge stored images with default team to ensure all members are always shown
-        const mergedTeam = defaultTeam.map(defaultMember => {
-          const storedMember = parsedTeam.find((m: any) => m.name === defaultMember.name);
-          return storedMember ? { ...defaultMember, image: storedMember.image } : defaultMember;
-        });
-        setTeam(mergedTeam);
+        const teamDoc = await getDoc(doc(db, "settings", "team"));
+        if (teamDoc.exists()) {
+          const parsedTeam = teamDoc.data().members || [];
+          const mergedTeam = defaultTeam.map(defaultMember => {
+            const storedMember = parsedTeam.find((m: any) => m.name === defaultMember.name);
+            return storedMember ? { ...defaultMember, image: storedMember.image } : defaultMember;
+          });
+          setTeam(mergedTeam);
+        }
       } catch (e) {
-        console.error("Failed to parse stored team", e);
+        console.error("Failed to fetch team", e);
       }
-    }
+    };
+    fetchTeam();
   }, []);
 
   const handleImageClick = (index: number) => {
@@ -56,14 +60,19 @@ export default function About() {
     const file = e.target.files?.[0];
     if (file && editingIndex !== null) {
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         const base64String = reader.result as string;
         const updatedTeam = [...team];
         updatedTeam[editingIndex].image = base64String;
         
         setTeam(updatedTeam);
-        localStorage.setItem('petnestle_team', JSON.stringify(updatedTeam));
-        showNotification('Profile picture updated successfully!', 'success');
+        try {
+          await setDoc(doc(db, "settings", "team"), { members: updatedTeam });
+          showNotification('Profile picture updated successfully!', 'success');
+        } catch (error) {
+          console.error("Error updating team:", error);
+          showNotification('Failed to update profile picture.', 'error');
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -157,6 +166,7 @@ export default function About() {
                 )}
               </div>
               <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">{member.name}</h3>
+              <p className="text-teal-600 dark:text-teal-400 font-medium mt-2">{member.role}</p>
             </div>
           ))}
         </div>

@@ -3,6 +3,8 @@ import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
 import { UserCircle, Mail, Phone, MapPin, Save, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { db } from "../firebase";
+import { doc, updateDoc } from "firebase/firestore";
 
 export default function Profile() {
   const { user, login } = useAuth();
@@ -33,34 +35,26 @@ export default function Profile() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSave = () => {
-    if (!user) return;
+  const handleSave = async () => {
+    if (!user || !user.uid) return;
 
-    // Update in localStorage based on role
-    const roleMap: Record<string, string> = {
-      'owner': 'petOwners',
-      'doctor': 'doctors',
-      'trainer': 'trainers',
-      'hospital': 'hospitals'
-    };
-    
-    const storageKey = roleMap[user.role];
-    if (storageKey) {
-      const users = JSON.parse(localStorage.getItem(storageKey) || '[]');
-      const updatedUsers = users.map((u: any) => {
-        if (u.email === user.email) {
-          return { ...u, ...formData, fullName: formData.name }; // Handle fullName vs name
-        }
-        return u;
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        name: formData.name,
+        phone: formData.phone,
+        address: formData.address
       });
-      localStorage.setItem(storageKey, JSON.stringify(updatedUsers));
-    }
 
-    // Update context
-    login({ ...user, ...formData });
-    
-    setIsEditing(false);
-    showNotification('Profile updated successfully!', 'success');
+      // Update context
+      login({ ...user, ...formData });
+      
+      setIsEditing(false);
+      showNotification('Profile updated successfully!', 'success');
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      showNotification('Failed to update profile.', 'error');
+    }
   };
 
   if (!user) return null;

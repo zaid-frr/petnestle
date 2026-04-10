@@ -1,0 +1,80 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the application (owner, doctor, trainer, hospital, admin)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["owner", "doctor", "trainer", "hospital", "admin"] },
+        "phoneNumber": { "type": "string" },
+        "address": { "type": "string" },
+        "petName": { "type": "string" },
+        "petType": { "type": "string" },
+        "petAge": { "type": "string" },
+        "vaccinationStatus": { "type": "string" },
+        "specialization": { "type": "string" },
+        "experience": { "type": "string" },
+        "charges": { "type": "string" },
+        "about": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "name", "role"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "An appointment booking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "service": { "type": "string" },
+        "serviceName": { "type": "string" },
+        "provider": { "type": "string" },
+        "providerName": { "type": "string" },
+        "price": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Confirmed", "Cancelled", "Completed"] },
+        "date": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhone": { "type": "string" },
+        "userAddress": { "type": "string" },
+        "userRole": { "type": "string" },
+        "petName": { "type": "string" },
+        "petType": { "type": "string" },
+        "petAge": { "type": "string" },
+        "vaccinationStatus": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "service", "provider", "status", "userEmail"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A notification for a user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "message": { "type": "string" },
+        "read": { "type": "boolean" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userEmail", "message", "read", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "All bookings"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "User notifications"
+    }
+  }
+}

@@ -4,9 +4,11 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useNotification } from "../context/NotificationContext";
+import { db } from "../firebase";
+import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, setDoc } from "firebase/firestore";
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, isAuthReady } = useAuth();
   const navigate = useNavigate();
   const { showNotification } = useNotification();
   const [bookings, setBookings] = useState<any[]>([]);
@@ -23,107 +25,117 @@ export default function Dashboard() {
   const [showBookingModal, setShowBookingModal] = useState(false);
 
   useEffect(() => {
+    if (!isAuthReady) return;
     if (!user) {
       navigate('/login');
       return;
     }
     
-    const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-    
+    // Fetch Bookings
+    let bookingsQuery;
     if (user.role === 'owner') {
-      setBookings(allBookings.filter((b: any) => b.userEmail === user.email));
-      
-      // Load pets
-      const allPets = JSON.parse(localStorage.getItem('pets') || '[]');
-      setPets(allPets.filter((p: any) => p.ownerEmail === user.email));
+      bookingsQuery = query(collection(db, "bookings"), where("userEmail", "==", user.email));
     } else if (user.role === 'admin') {
-      setBookings(allBookings);
-      
-      // Load all users for admin
-      const owners = JSON.parse(localStorage.getItem('petOwners') || '[]').map((u:any) => ({...u, role: 'Owner'}));
-      const doctors = JSON.parse(localStorage.getItem('doctors') || '[]').map((u:any) => ({...u, role: 'Doctor'}));
-      const trainers = JSON.parse(localStorage.getItem('trainers') || '[]').map((u:any) => ({...u, role: 'Trainer'}));
-      const hospitals = JSON.parse(localStorage.getItem('hospitals') || '[]').map((u:any) => ({...u, role: 'Hospital'}));
-      
-      setAllUsers([...owners, ...doctors, ...trainers, ...hospitals]);
+      bookingsQuery = collection(db, "bookings");
     } else {
-      // Doctor, Trainer, Hospital
-      setBookings(allBookings.filter((b: any) => b.providerEmail === user.email));
+      bookingsQuery = query(collection(db, "bookings"), where("providerEmail", "==", user.email));
     }
-  }, [user, navigate]);
+    
+    const unsubBookings = onSnapshot(bookingsQuery, (snapshot) => {
+      const fetchedBookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setBookings(fetchedBookings);
+    });
 
-  if (!user) return null;
+    // Fetch Pets
+    let unsubPets = () => {};
+    if (user.role === 'owner') {
+      const petsQuery = query(collection(db, "pets"), where("ownerEmail", "==", user.email));
+      unsubPets = onSnapshot(petsQuery, (snapshot) => {
+        const fetchedPets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setPets(fetchedPets);
+      });
+    }
 
-  const handleDeleteUser = (email: string, role: string) => {
-    const roleMap: Record<string, string> = {
-      'Owner': 'petOwners',
-      'Doctor': 'doctors',
-      'Trainer': 'trainers',
-      'Hospital': 'hospitals'
+    // Fetch Users for Admin
+    let unsubUsers = () => {};
+    if (user.role === 'admin') {
+      unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
+        const fetchedUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setAllUsers(fetchedUsers);
+      });
+    }
+
+    return () => {
+      unsubBookings();
+      unsubPets();
+      unsubUsers();
     };
-    const storageKey = roleMap[role];
-    if (storageKey) {
-      const users = JSON.parse(localStorage.getItem(storageKey) || '[]');
-      const updated = users.filter((u: any) => u.email !== email);
-      localStorage.setItem(storageKey, JSON.stringify(updated));
-      setAllUsers(allUsers.filter(u => u.email !== email));
+  }, [user, isAuthReady, navigate]);
+
+  if (!isAuthReady || !user) return null;
+
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      await deleteDoc(doc(db, "users", userId));
       showNotification('User deleted successfully.', 'success');
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      showNotification('Failed to delete user.', 'error');
     }
   };
 
-  const handleAddPet = (e: React.FormEvent) => {
+  const handleAddPet = async (e: React.FormEvent) => {
     e.preventDefault();
+    const petId = Date.now().toString();
     const petToAdd = {
       ...newPet,
-      id: Date.now().toString(),
+      id: petId,
       ownerEmail: user.email
     };
     
-    const allPets = JSON.parse(localStorage.getItem('pets') || '[]');
-    const updatedPets = [...allPets, petToAdd];
-    localStorage.setItem('pets', JSON.stringify(updatedPets));
-    
-    setPets([...pets, petToAdd]);
-    setNewPet({ name: '', type: '', age: '', vaccinationStatus: 'Up to date' });
-    setShowAddPet(false);
-    showNotification('Pet added successfully!', 'success');
-  };
-
-  const updateBookingStatus = (bookingId: string, newStatus: string) => {
-    const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-    const bookingToUpdate = allBookings.find((b: any) => b.id === bookingId);
-    const updatedBookings = allBookings.map((b: any) => 
-      b.id === bookingId ? { ...b, status: newStatus } : b
-    );
-    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
-    
-    // Create a notification for the user
-    if (bookingToUpdate && bookingToUpdate.userEmail) {
-      const allNotifications = JSON.parse(localStorage.getItem('user_notifications') || '[]');
-      const newNotification = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        userEmail: bookingToUpdate.userEmail,
-        message: `Your booking for ${bookingToUpdate.service} with ${bookingToUpdate.provider} has been ${newStatus}.`,
-        read: false,
-        timestamp: new Date().toISOString()
-      };
-      localStorage.setItem('user_notifications', JSON.stringify([...allNotifications, newNotification]));
+    try {
+      await setDoc(doc(db, "pets", petId), petToAdd);
+      setNewPet({ name: '', type: '', age: '', vaccinationStatus: 'Up to date' });
+      setShowAddPet(false);
+      showNotification('Pet added successfully!', 'success');
+    } catch (error) {
+      console.error("Error adding pet:", error);
+      showNotification('Failed to add pet.', 'error');
     }
-
-    // Update local state
-    setBookings(bookings.map((b: any) => 
-      b.id === bookingId ? { ...b, status: newStatus } : b
-    ));
-    showNotification(`Booking status updated to ${newStatus}`, 'info');
   };
 
-  const handleDeleteBooking = (bookingId: string) => {
-    const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-    const updatedBookings = allBookings.filter((b: any) => b.id !== bookingId);
-    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
-    
-    setBookings(bookings.filter((b: any) => b.id !== bookingId));
-    showNotification('Booking deleted successfully.', 'success');
+  const updateBookingStatus = async (bookingId: string, newStatus: string) => {
+    try {
+      await updateDoc(doc(db, "bookings", bookingId), { status: newStatus });
+      
+      const bookingToUpdate = bookings.find(b => b.id === bookingId);
+      
+      if (bookingToUpdate && bookingToUpdate.userEmail) {
+        const notificationId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+        await setDoc(doc(db, "notifications", notificationId), {
+          id: notificationId,
+          userEmail: bookingToUpdate.userEmail,
+          message: `Your booking for ${bookingToUpdate.service} with ${bookingToUpdate.provider} has been ${newStatus}.`,
+          read: false,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      showNotification(`Booking status updated to ${newStatus}`, 'info');
+    } catch (error) {
+      console.error("Error updating booking:", error);
+      showNotification('Failed to update booking status.', 'error');
+    }
+  };
+
+  const handleDeleteBooking = async (bookingId: string) => {
+    try {
+      await deleteDoc(doc(db, "bookings", bookingId));
+      showNotification('Booking deleted successfully.', 'success');
+    } catch (error) {
+      console.error("Error deleting booking:", error);
+      showNotification('Failed to delete booking.', 'error');
+    }
   };
 
   // Mock Data for charts based on role
@@ -346,7 +358,7 @@ export default function Dashboard() {
                           </td>
                           <td className="px-6 py-4">
                             <button 
-                              onClick={() => handleDeleteUser(u.email, u.role)}
+                              onClick={() => handleDeleteUser(u.id)}
                               className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                             >
                               <Trash2 className="h-4 w-4" />

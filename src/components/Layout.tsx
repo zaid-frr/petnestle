@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { cn } from "../lib/utils";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
+import { db } from "../firebase";
+import { collection, query, where, onSnapshot, doc, updateDoc } from "firebase/firestore";
 
 export default function Layout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -11,7 +13,7 @@ export default function Layout() {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthReady } = useAuth();
   const { showNotification } = useNotification();
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -34,33 +36,28 @@ export default function Layout() {
 
   // Check for new notifications
   useEffect(() => {
-    if (!user) return;
+    if (!isAuthReady || !user) return;
 
-    const checkNotifications = () => {
-      const allNotifications = JSON.parse(localStorage.getItem('user_notifications') || '[]');
-      const userNotifications = allNotifications.filter((n: any) => n.userEmail === user.email && !n.read);
+    const q = query(
+      collection(db, "notifications"),
+      where("userEmail", "==", user.email),
+      where("read", "==", false)
+    );
 
-      if (userNotifications.length > 0) {
-        userNotifications.forEach((n: any) => {
-          showNotification(n.message, 'info');
-        });
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const notification = change.doc.data();
+          showNotification(notification.message, 'info');
+          
+          // Mark as read
+          updateDoc(doc(db, "notifications", change.doc.id), { read: true }).catch(console.error);
+        }
+      });
+    });
 
-        // Mark as read
-        const updatedNotifications = allNotifications.map((n: any) => 
-          n.userEmail === user.email ? { ...n, read: true } : n
-        );
-        localStorage.setItem('user_notifications', JSON.stringify(updatedNotifications));
-      }
-    };
-
-    // Check immediately
-    checkNotifications();
-
-    // Poll every 3 seconds
-    const interval = setInterval(checkNotifications, 3000);
-
-    return () => clearInterval(interval);
-  }, [user, showNotification]);
+    return () => unsubscribe();
+  }, [user, isAuthReady, showNotification]);
 
   const toggleDarkMode = () => {
     if (isDarkMode) {

@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Loader2, Sparkles, Activity, Stethoscope, Apple } from "lucide-react";
 import { GoogleGenAI } from "@google/genai";
+import Markdown from "react-markdown";
 
 // Lazy initialize to prevent app crash if env var is missing
 let aiClient: GoogleGenAI | null = null;
 const getAIClient = () => {
   if (!aiClient) {
-    // @ts-ignore - Handle both Vite's import.meta.env and Node's process.env
-    const apiKey = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) || process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey || apiKey === 'undefined' || apiKey === 'null' || apiKey === '') {
       console.error("GEMINI_API_KEY is missing. Chatbot will not work.");
       return null;
@@ -64,9 +64,44 @@ export default function Chatbot() {
         throw new Error("API_KEY_MISSING");
       }
       
+      // Format history for Gemini API
+      // We skip the first message (the bot's greeting)
+      const rawHistory = messages
+        .filter(m => m.id !== "1") // Skip initial greeting
+        .map(m => ({
+          role: m.sender === "user" ? "user" : "model",
+          text: m.text
+        }));
+
+      // Add the new user message to history
+      rawHistory.push({
+        role: "user",
+        text: textToSend
+      });
+
+      // Collapse consecutive messages from the same role to prevent 400 errors
+      const history: any[] = [];
+      let currentRole: string | null = null;
+      let currentText = "";
+
+      for (const msg of rawHistory) {
+        if (msg.role === currentRole) {
+          currentText += "\n\n" + msg.text;
+        } else {
+          if (currentRole) {
+            history.push({ role: currentRole, parts: [{ text: currentText }] });
+          }
+          currentRole = msg.role;
+          currentText = msg.text;
+        }
+      }
+      if (currentRole) {
+        history.push({ role: currentRole, parts: [{ text: currentText }] });
+      }
+
       const response = await client.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: textToSend,
+        model: 'gemini-3.1-flash-lite-preview',
+        contents: history,
         config: {
           systemInstruction: "You are a helpful veterinary and pet care assistant for PetNestle. Answer questions about pet health, training, and general care. Keep your answers concise, friendly, and helpful. Always advise users to consult a real vet for serious medical emergencies. Use markdown for formatting if needed."
         }
@@ -147,7 +182,9 @@ export default function Chatbot() {
                         : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-100 dark:border-slate-700 rounded-tl-none shadow-md"
                     }`}
                   >
-                    <p className="text-sm md:text-base leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                    <div className="text-sm md:text-base leading-relaxed whitespace-pre-wrap markdown-body">
+                      <Markdown>{msg.text}</Markdown>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -4,6 +4,8 @@ import { Star, MapPin, DollarSign, Briefcase, CheckCircle, Search, Filter, Messa
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
 import { mockDoctors, mockTrainers, mockHospitals } from "../data/mockProviders";
+import { db } from "../firebase";
+import { collection, query, where, getDocs, setDoc, doc, onSnapshot } from "firebase/firestore";
 
 const serviceDetailsMap: Record<string, any> = {
   vaccination: { name: "Vaccination", description: "Keep your pets safe from preventable diseases.", price: "₹500", duration: "30 mins" },
@@ -38,57 +40,70 @@ export default function Providers() {
   const [availableRoles, setAvailableRoles] = useState<string[]>([]);
 
   useEffect(() => {
-    const storedReviews = JSON.parse(localStorage.getItem('reviews') || '{}');
-    setReviews(storedReviews);
+    const fetchProviders = async () => {
+      const usersSnapshot = await getDocs(collection(db, "users"));
+      const allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    // Fetch registered providers from localStorage
-    const registeredDoctors = JSON.parse(localStorage.getItem('doctors') || '[]').map((d: any) => ({
-      ...d,
-      name: d.fullName || d.name,
-      location: d.clinicName || d.location || 'Unknown',
-      role: 'Doctor',
-      rating: d.rating || 'New',
-      image: d.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(d.fullName || 'Doctor')}&background=0D8ABC&color=fff`
-    }));
+      const registeredDoctors = allUsers.filter((u: any) => u.role === 'doctor').map((d: any) => ({
+        ...d,
+        name: d.name || d.fullName || 'Doctor',
+        location: d.clinicName || d.location || 'Unknown',
+        role: 'Doctor',
+        rating: d.rating || 'New',
+        image: d.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name || d.fullName || 'Doctor')}&background=0D8ABC&color=fff`
+      }));
 
-    const registeredTrainers = JSON.parse(localStorage.getItem('trainers') || '[]').map((t: any) => ({
-      ...t,
-      name: t.fullName || t.name,
-      location: t.availableLocation || t.location || 'Unknown',
-      role: 'Trainer',
-      rating: t.rating || 'New',
-      image: t.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.fullName || 'Trainer')}&background=0D8ABC&color=fff`
-    }));
+      const registeredTrainers = allUsers.filter((u: any) => u.role === 'trainer').map((t: any) => ({
+        ...t,
+        name: t.name || t.fullName || 'Trainer',
+        location: t.availableLocation || t.location || 'Unknown',
+        role: 'Trainer',
+        rating: t.rating || 'New',
+        image: t.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name || t.fullName || 'Trainer')}&background=0D8ABC&color=fff`
+      }));
 
-    const registeredHospitals = JSON.parse(localStorage.getItem('hospitals') || '[]').map((h: any) => ({
-      ...h,
-      name: h.hospitalName || h.name,
-      location: h.address || h.location || 'Unknown',
-      role: 'Hospital',
-      rating: h.rating || 'New',
-      image: h.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(h.hospitalName || 'Hospital')}&background=0D8ABC&color=fff`
-    }));
+      const registeredHospitals = allUsers.filter((u: any) => u.role === 'hospital').map((h: any) => ({
+        ...h,
+        name: h.name || h.hospitalName || 'Hospital',
+        location: h.address || h.location || 'Unknown',
+        role: 'Hospital',
+        rating: h.rating || 'New',
+        image: h.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(h.name || h.hospitalName || 'Hospital')}&background=0D8ABC&color=fff`
+      }));
 
-    // Filter out mock data that might have been saved in localStorage during seeding
-    const newDoctors = registeredDoctors.filter((d: any) => !mockDoctors.some(md => md.id === d.id));
-    const newTrainers = registeredTrainers.filter((t: any) => !mockTrainers.some(mt => mt.id === t.id));
-    const newHospitals = registeredHospitals.filter((h: any) => !mockHospitals.some(mh => mh.id === h.id));
+      let initialProviders: any[] = [];
 
-    let initialProviders: any[] = [];
+      if (serviceId === 'vaccination' || serviceId === 'checkup') {
+        initialProviders = [...mockDoctors, ...registeredDoctors];
+      } else if (serviceId === 'training' || serviceId === 'grooming') {
+        initialProviders = [...mockTrainers, ...registeredTrainers];
+      } else if (serviceId === 'emergency') {
+        initialProviders = [...mockHospitals, ...registeredHospitals];
+      }
 
-    if (serviceId === 'vaccination' || serviceId === 'checkup') {
-      initialProviders = [...mockDoctors, ...newDoctors];
-    } else if (serviceId === 'training' || serviceId === 'grooming') {
-      initialProviders = [...mockTrainers, ...newTrainers];
-    } else if (serviceId === 'emergency') {
-      initialProviders = [...mockHospitals, ...newHospitals];
-    }
+      setProviders(initialProviders);
+      setFilteredProviders(initialProviders);
+      
+      const roles = Array.from(new Set(initialProviders.map(p => p.role)));
+      setAvailableRoles(roles);
+    };
 
-    setProviders(initialProviders);
-    setFilteredProviders(initialProviders);
-    
-    const roles = Array.from(new Set(initialProviders.map(p => p.role)));
-    setAvailableRoles(roles);
+    fetchProviders();
+
+    // Listen to reviews
+    const unsubscribeReviews = onSnapshot(collection(db, "reviews"), (snapshot) => {
+      const allReviews: Record<string, any[]> = {};
+      snapshot.docs.forEach(doc => {
+        const review = { id: doc.id, ...doc.data() } as any;
+        if (!allReviews[review.providerId]) {
+          allReviews[review.providerId] = [];
+        }
+        allReviews[review.providerId].push(review);
+      });
+      setReviews(allReviews);
+    });
+
+    return () => unsubscribeReviews();
   }, [serviceId]);
 
   useEffect(() => {
@@ -124,11 +139,12 @@ export default function Providers() {
 
   const serviceDetails = serviceId ? serviceDetailsMap[serviceId] : null;
 
-  const confirmBooking = () => {
+  const confirmBooking = async () => {
     if (!selectedProvider) return;
 
+    const bookingId = Date.now().toString();
     const newBooking = {
-      id: Date.now().toString(),
+      id: bookingId,
       serviceId,
       serviceName: serviceDetails?.name || serviceId,
       providerId: selectedProvider.id,
@@ -149,12 +165,15 @@ export default function Providers() {
       vaccinationStatus: user.vaccinationStatus || ''
     };
 
-    const existingBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-    localStorage.setItem('bookings', JSON.stringify([...existingBookings, newBooking]));
-    
-    setShowConfirmModal(false);
-    showNotification('Appointment booked successfully!', 'success');
-    navigate('/dashboard');
+    try {
+      await setDoc(doc(db, "bookings", bookingId), newBooking);
+      setShowConfirmModal(false);
+      showNotification('Appointment booked successfully!', 'success');
+      navigate('/dashboard');
+    } catch (error) {
+      console.error("Error booking appointment:", error);
+      showNotification('Failed to book appointment.', 'error');
+    }
   };
 
   const cancelBooking = () => {
@@ -162,30 +181,32 @@ export default function Providers() {
     setSelectedProvider(null);
   };
 
-  const handleAddReview = (providerId: string) => {
+  const handleAddReview = async (providerId: string) => {
     if (!user) {
       navigate('/login');
       return;
     }
     if (!newReview.trim()) return;
 
-    const updatedReviews = { ...reviews };
-    if (!updatedReviews[providerId]) {
-      updatedReviews[providerId] = [];
-    }
-    
-    updatedReviews[providerId].push({
-      id: Date.now().toString(),
+    const reviewId = Date.now().toString();
+    const review = {
+      id: reviewId,
+      providerId,
+      userEmail: user.email,
       userName: user.name,
       text: newReview,
       date: new Date().toLocaleDateString()
-    });
+    };
 
-    localStorage.setItem('reviews', JSON.stringify(updatedReviews));
-    setReviews(updatedReviews);
-    setNewReview('');
-    setActiveReviewProvider(null);
-    showNotification('Review posted successfully!', 'success');
+    try {
+      await setDoc(doc(db, "reviews", reviewId), review);
+      setNewReview('');
+      setActiveReviewProvider(null);
+      showNotification('Review posted successfully!', 'success');
+    } catch (error) {
+      console.error("Error posting review:", error);
+      showNotification('Failed to post review.', 'error');
+    }
   };
 
   return (
