@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useNotification } from "../context/NotificationContext";
 import { db } from "../firebase";
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, setDoc, getDocs } from "firebase/firestore";
+import { demoProviders } from "../data/mockProviders";
 
 export default function Dashboard() {
   const { user, isAuthReady } = useAuth();
@@ -14,6 +15,9 @@ export default function Dashboard() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('bookings');
+  const [myReviews, setMyReviews] = useState<any[]>([]);
+  const [selectedAdminUser, setSelectedAdminUser] = useState<any>(null);
+  const [showAdminUserModal, setShowAdminUserModal] = useState(false);
   
   // Pets state
   const [pets, setPets] = useState<any[]>([]);
@@ -87,10 +91,21 @@ export default function Dashboard() {
       });
     }
 
+    // Fetch reviews given by this user (owners)
+    let unsubReviews = () => {};
+    if (user.role === 'owner') {
+      const reviewsQuery = query(collection(db, "reviews"), where("userEmail", "==", user.email));
+      unsubReviews = onSnapshot(reviewsQuery, (snapshot) => {
+        const fetchedReviews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setMyReviews(fetchedReviews);
+      });
+    }
+
     return () => {
       unsubBookings();
       unsubPets();
       unsubUsers();
+      unsubReviews();
     };
   }, [user, isAuthReady, navigate]);
 
@@ -223,6 +238,22 @@ export default function Dashboard() {
     }
   };
 
+  const statusCounts = {
+    pending: bookings.filter(b => (b.status || 'Pending') === 'Pending').length,
+    confirmed: bookings.filter(b => b.status === 'Confirmed').length,
+    completed: bookings.filter(b => b.status === 'Completed').length,
+    cancelled: bookings.filter(b => b.status === 'Cancelled').length,
+  };
+
+  const statusChartData = [
+    { name: 'Pending', value: statusCounts.pending },
+    { name: 'Confirmed', value: statusCounts.confirmed },
+    { name: 'Completed', value: statusCounts.completed },
+    { name: 'Cancelled', value: statusCounts.cancelled },
+  ];
+
+  const providerNameById = new Map<string, string>(demoProviders.map((p: any) => [p.id, p.name]));
+
   return (
     <div className="py-12 bg-slate-50 dark:bg-slate-900 min-h-screen transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -259,6 +290,102 @@ export default function Dashboard() {
         {/* Dynamic Content based on Role */}
         {user.role === 'owner' ? (
           <div className="space-y-8">
+            {/* Owner Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Total Appointments</p>
+                <p className="text-3xl font-extrabold text-slate-900 dark:text-white mt-2">{bookings.length}</p>
+              </div>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Pending</p>
+                <p className="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-2">{statusCounts.pending}</p>
+              </div>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Completed</p>
+                <p className="text-3xl font-extrabold text-green-600 dark:text-green-400 mt-2">{statusCounts.completed}</p>
+              </div>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">My Reviews</p>
+                <p className="text-3xl font-extrabold text-slate-900 dark:text-white mt-2">{myReviews.length}</p>
+              </div>
+            </div>
+
+            {/* Status chart + History */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Appointments Status</h2>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={statusChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b' }} />
+                      <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b' }} />
+                      <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                      <Bar dataKey="value" fill="#0d9488" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                {bookings.length === 0 && (
+                  <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                    No bookings yet — bars will update automatically after your first appointment.
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Appointment History</h2>
+                {bookings.length === 0 ? (
+                  <p className="text-slate-500 dark:text-slate-400 text-sm">No appointments yet.</p>
+                ) : (
+                  <div className="space-y-3 max-h-72 overflow-y-auto pr-2">
+                    {[...bookings]
+                      .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+                      .map((b, idx) => (
+                        <div key={idx} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-bold text-slate-900 dark:text-white">{b.serviceName}</p>
+                              <p className="text-sm text-slate-600 dark:text-slate-300">Provider: {b.providerName}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{b.date}{b.time ? ` • ${b.time}` : ''}</p>
+                            </div>
+                            <span className={`px-3 py-1 text-xs font-bold rounded-full ${getStatusColor(b.status || 'Pending')}`}>
+                              {b.status || 'Pending'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Reviews given by customer */}
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">My Reviews</h2>
+              {myReviews.length === 0 ? (
+                <p className="text-slate-500 dark:text-slate-400 text-sm">No reviews posted yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {myReviews
+                    .slice()
+                    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+                    .map((r: any) => (
+                      <div key={r.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-bold text-slate-900 dark:text-white">
+                              {providerNameById.get(r.providerId) || r.providerName || 'Provider'}
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{r.date || ''}</p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-slate-700 dark:text-slate-200 mt-2">{r.text}</p>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
             {/* My Pets Section */}
             <div>
               <div className="flex justify-between items-center mb-6">
@@ -394,7 +521,18 @@ export default function Dashboard() {
                     <tbody className="text-sm">
                       {allUsers.map((u, idx) => (
                         <tr key={idx} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                          <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{u.fullName || u.hospitalName}</td>
+                          <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedAdminUser(u);
+                                setShowAdminUserModal(true);
+                              }}
+                              className="text-left hover:underline decoration-teal-400 underline-offset-4"
+                            >
+                              {u.name || u.fullName || u.hospitalName || u.clinicName || 'User'}
+                            </button>
+                          </td>
                           <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{u.email}</td>
                           <td className="px-6 py-4">
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400">
@@ -433,8 +571,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Charts */}
-                {user.role !== 'trainer' && (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                     <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
                       <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Weekly Appointments</h2>
                       <div className="h-72">
@@ -449,8 +586,26 @@ export default function Dashboard() {
                         </ResponsiveContainer>
                       </div>
                     </div>
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+                      <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Bookings Status</h2>
+                      <div className="h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={statusChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b' }} />
+                            <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b' }} />
+                            <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                            <Bar dataKey="value" fill="#0d9488" radius={[6, 6, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      {bookings.length === 0 && (
+                        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                          No bookings yet — bars will update automatically.
+                        </p>
+                      )}
+                    </div>
                   </div>
-                )}
 
                 {/* Recent Bookings Table */}
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
@@ -526,6 +681,114 @@ export default function Dashboard() {
           </>
         )}
       </div>
+
+      {/* Admin user details modal */}
+      {showAdminUserModal && selectedAdminUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                  {selectedAdminUser.name || selectedAdminUser.fullName || selectedAdminUser.hospitalName || 'User'}
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 capitalize">{selectedAdminUser.role || 'user'}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAdminUserModal(false)}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="flex flex-col sm:flex-row gap-5 items-start">
+                <div className="w-24 h-24 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex-shrink-0">
+                  {selectedAdminUser.photoURL || selectedAdminUser.image ? (
+                    <img
+                      src={selectedAdminUser.photoURL || selectedAdminUser.image}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                      loading="lazy"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = `https://picsum.photos/seed/${encodeURIComponent(
+                          selectedAdminUser.id || selectedAdminUser.email || 'user'
+                        )}/300/300`;
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-400">
+                      <UserCircle className="h-10 w-10" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                  <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Email</p>
+                    <p className="font-medium text-slate-900 dark:text-white break-all">{selectedAdminUser.email || '—'}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Phone</p>
+                    <p className="font-medium text-slate-900 dark:text-white">{selectedAdminUser.phone || selectedAdminUser.phoneNumber || '—'}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700 rounded-xl p-4 sm:col-span-2">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Address / Location</p>
+                    <p className="font-medium text-slate-900 dark:text-white">{selectedAdminUser.address || selectedAdminUser.location || '—'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {(selectedAdminUser.about || selectedAdminUser.userAbout) && (
+                <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">About</p>
+                  <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">
+                    {selectedAdminUser.about || selectedAdminUser.userAbout}
+                  </p>
+                </div>
+              )}
+
+              {/* Role-specific */}
+              {selectedAdminUser.role === 'doctor' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Clinic</p>
+                    <p className="font-medium text-slate-900 dark:text-white">{selectedAdminUser.clinicName || '—'}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Specialization</p>
+                    <p className="font-medium text-slate-900 dark:text-white">{selectedAdminUser.specialization || '—'}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Experience</p>
+                    <p className="font-medium text-slate-900 dark:text-white">{selectedAdminUser.experience ? `${selectedAdminUser.experience} years` : '—'}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Fee</p>
+                    <p className="font-medium text-slate-900 dark:text-white">{selectedAdminUser.consultationFee ? `₹${selectedAdminUser.consultationFee}` : '—'}</p>
+                  </div>
+                </div>
+              )}
+
+              {selectedAdminUser.role === 'owner' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Pet Name</p>
+                    <p className="font-medium text-slate-900 dark:text-white">{selectedAdminUser.petName || '—'}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Pet Type</p>
+                    <p className="font-medium text-slate-900 dark:text-white">{selectedAdminUser.petType || '—'}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Booking Details Modal */}
       {showBookingModal && selectedBooking && (

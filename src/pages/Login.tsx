@@ -3,9 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { PawPrint } from 'lucide-react';
-import { auth, db } from '../firebase';
+import { auth, useFirebaseEmulators } from '../firebase';
 import { signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -13,7 +13,6 @@ export default function Login() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { showNotification } = useNotification();
-  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -25,25 +24,6 @@ export default function Login() {
       showNotification('Logged in successfully', 'success');
       navigate('/dashboard');
     } catch (err: any) {
-      // Check if this is a dummy user in Firestore
-      try {
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('email', '==', email));
-        const snapshot = await getDocs(q);
-        
-        if (!snapshot.empty) {
-          const userData = snapshot.docs[0].data();
-          if (userData.uid && userData.uid.startsWith('dummy_')) {
-            await login(userData as any);
-            showNotification('Logged in successfully (Dummy Account)', 'success');
-            navigate('/dashboard');
-            return;
-          }
-        }
-      } catch (firestoreErr) {
-        console.error("Error checking dummy user:", firestoreErr);
-      }
-
       console.error("Login error:", err);
       setError(err.message || 'Failed to log in with email and password.');
       showNotification('Failed to log in', 'error');
@@ -56,14 +36,26 @@ export default function Login() {
     setError('');
     setIsLoading(true);
     try {
+      if (useFirebaseEmulators) {
+        setError('Google sign-in is disabled in emulator mode. Use email/password while developing locally.');
+        showNotification('Google sign-in disabled in emulator mode', 'error');
+        return;
+      }
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
       showNotification('Logged in successfully', 'success');
       navigate('/dashboard');
     } catch (err: any) {
       console.error("Login error:", err);
+      if (err?.code === 'auth/unauthorized-domain') {
+        setError(
+          'Firebase blocked this domain. Add localhost (and your IP) to Firebase Console → Authentication → Settings → Authorized domains.'
+        );
+        showNotification('Unauthorized domain for Google sign-in', 'error');
+      } else {
       setError(err.message || 'Failed to log in with Google.');
       showNotification('Failed to log in', 'error');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -132,7 +124,7 @@ export default function Login() {
             className="w-full flex justify-center items-center gap-3 py-3 px-4 border border-slate-300 dark:border-slate-600 rounded-xl shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors disabled:opacity-50"
           >
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-            {isLoading ? 'Signing in...' : 'Sign in with Google'}
+            {useFirebaseEmulators ? 'Google sign-in disabled (emulator)' : (isLoading ? 'Signing in...' : 'Sign in with Google')}
           </button>
           
           <div className="text-center mt-4">

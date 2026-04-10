@@ -3,7 +3,7 @@ import { auth, db } from '../firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-export type Role = 'owner' | 'doctor' | 'trainer' | 'hospital' | 'admin';
+export type Role = 'owner' | 'doctor' | 'trainer' | 'hospital' | 'pet_care' | 'admin';
 
 export interface User {
   uid?: string;
@@ -50,24 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error("Error fetching user data:", error);
         }
       } else {
-        // Check for mock user in localStorage
-        const mockUserId = localStorage.getItem('mockUserId');
-        if (mockUserId) {
-          try {
-            const userDoc = await getDoc(doc(db, 'users', mockUserId));
-            if (userDoc.exists()) {
-              setUser(userDoc.data() as User);
-            } else {
-              setUser(null);
-              localStorage.removeItem('mockUserId');
-            }
-          } catch (error) {
-            console.error("Error fetching mock user:", error);
-            setUser(null);
-          }
-        } else {
-          setUser(null);
-        }
+        setUser(null);
       }
       setIsAuthReady(true);
     });
@@ -78,16 +61,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (userData: User) => {
     setUser(userData);
     if (userData.uid) {
-      if (userData.uid.startsWith('dummy_')) {
-        localStorage.setItem('mockUserId', userData.uid);
-      }
       await setDoc(doc(db, 'users', userData.uid), userData, { merge: true });
     }
   };
 
   const logout = async () => {
     await signOut(auth);
-    localStorage.removeItem('mockUserId');
     setUser(null);
   };
 

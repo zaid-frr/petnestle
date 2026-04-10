@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { User, Stethoscope, Dumbbell, Building2, CheckCircle } from 'lucide-react';
-import { auth, db } from '../firebase';
+import { auth, db, useFirebaseEmulators } from '../firebase';
 import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 
@@ -36,25 +36,8 @@ export default function Register() {
 
     setIsLoading(true);
     try {
-      // For dummy data testing, we'll create a user with a dummy password if it fails
-      let user;
-      try {
-        const result = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        user = result.user;
-      } catch (authError: any) {
-        // If it's an invalid email error or operation not allowed, and we want to allow dummy data, we mock the user object
-        // NOTE: This is a hack for testing purposes only and won't actually authenticate them with Firebase Auth
-        // They will only exist in Firestore.
-        if (authError.code === 'auth/invalid-email' || authError.code === 'auth/operation-not-allowed') {
-           console.warn("Auth error, proceeding with dummy data creation in Firestore only.");
-           user = {
-             uid: 'dummy_' + Date.now().toString(),
-             email: formData.email
-           };
-        } else {
-          throw authError;
-        }
-      }
+      const result = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      const user = result.user;
 
       const roleMap: Record<string, any> = {
         petOwners: 'owner',
@@ -82,11 +65,18 @@ export default function Register() {
       showNotification('Registration successful!', 'success');
       
       setTimeout(() => {
-        navigate('/login'); // Redirect to login since dummy users can't actually log in via Firebase Auth
+        navigate('/dashboard');
       }, 1500);
     } catch (error: any) {
       console.error("Registration error:", error);
-      showNotification(error.message || 'Failed to register', 'error');
+      if (error?.code === 'auth/operation-not-allowed') {
+        showNotification(
+          'Email/password sign-up is disabled for this Firebase project. Enable it in Firebase Auth or run with emulators for local testing.',
+          'error'
+        );
+      } else {
+        showNotification(error.message || 'Failed to register', 'error');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -97,6 +87,10 @@ export default function Register() {
 
     setIsLoading(true);
     try {
+      if (useFirebaseEmulators) {
+        showNotification('Google sign-up is disabled in emulator mode. Use email/password while developing locally.', 'error');
+        return;
+      }
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
@@ -130,7 +124,14 @@ export default function Register() {
       }, 1500);
     } catch (error: any) {
       console.error("Registration error:", error);
+      if (error?.code === 'auth/unauthorized-domain') {
+        showNotification(
+          'Firebase blocked this domain. Add localhost (and your IP) to Firebase Console → Authentication → Settings → Authorized domains.',
+          'error'
+        );
+      } else {
       showNotification(error.message || 'Failed to register', 'error');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -335,7 +336,7 @@ export default function Register() {
                   className="w-full flex justify-center items-center gap-3 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 font-bold py-3 px-4 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors shadow-sm disabled:opacity-50"
                 >
                   <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5 bg-white rounded-full p-0.5" />
-                  {isLoading ? 'Registering...' : 'Register with Google'}
+                  {useFirebaseEmulators ? 'Google sign-up disabled (emulator)' : (isLoading ? 'Registering...' : 'Register with Google')}
                 </button>
               </div>
             </form>
