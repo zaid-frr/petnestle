@@ -50,7 +50,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error("Error fetching user data:", error);
         }
       } else {
-        setUser(null);
+        // Check for mock user in localStorage
+        const mockUserId = localStorage.getItem('mockUserId');
+        if (mockUserId) {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', mockUserId));
+            if (userDoc.exists()) {
+              setUser(userDoc.data() as User);
+            } else {
+              setUser(null);
+              localStorage.removeItem('mockUserId');
+            }
+          } catch (error) {
+            console.error("Error fetching mock user:", error);
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
       }
       setIsAuthReady(true);
     });
@@ -61,12 +78,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (userData: User) => {
     setUser(userData);
     if (userData.uid) {
+      if (userData.uid.startsWith('dummy_')) {
+        localStorage.setItem('mockUserId', userData.uid);
+      }
       await setDoc(doc(db, 'users', userData.uid), userData, { merge: true });
     }
   };
 
   const logout = async () => {
     await signOut(auth);
+    localStorage.removeItem('mockUserId');
     setUser(null);
   };
 

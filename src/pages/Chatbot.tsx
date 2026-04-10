@@ -198,7 +198,7 @@ export default function Chatbot() {
                   </div>
                   <div className="px-5 py-4 rounded-2xl shadow-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-100 dark:border-slate-700 rounded-tl-none flex items-center gap-3 shadow-md">
                     <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
-                    <span className="text-sm text-slate-500 dark:text-slate-400">Gemini is thinking...</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400">PetNestle is thinking...</span>
                   </div>
                 </div>
               </div>
@@ -229,7 +229,7 @@ export default function Chatbot() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask Gemini about your pet..."
+                placeholder="Ask PetNestle about your pet..."
                 className="flex-grow px-6 py-4 rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
               />
               <button

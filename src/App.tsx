@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Services from "./pages/Services";
+import ServiceDetails from "./pages/ServiceDetails";
 import Tips from "./pages/Tips";
 import Chatbot from "./pages/Chatbot";
 import Dashboard from "./pages/Dashboard";
@@ -30,6 +31,7 @@ export default function App() {
               <Route index element={<Home />} />
               <Route path="about" element={<About />} />
               <Route path="services" element={<Services />} />
+              <Route path="services/:serviceId/details" element={<ServiceDetails />} />
               <Route path="providers/:serviceId" element={<Providers />} />
               <Route path="tips" element={<Tips />} />
               <Route path="chatbot" element={<Chatbot />} />

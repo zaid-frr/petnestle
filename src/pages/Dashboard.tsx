@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Users, Calendar, Activity, FileText, UserCircle, Trash2, PlusCircle } from "lucide-react";
+import { Users, Calendar, Activity, FileText, UserCircle, Trash2, PlusCircle, Phone, MessageSquare, Clock } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useNotification } from "../context/NotificationContext";
 import { db } from "../firebase";
-import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, setDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, setDoc, getDocs } from "firebase/firestore";
 
 export default function Dashboard() {
   const { user, isAuthReady } = useAuth();
@@ -23,6 +23,28 @@ export default function Dashboard() {
   // Booking Modal State
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [appointmentTime, setAppointmentTime] = useState('');
+  const [providerDetails, setProviderDetails] = useState<any>(null);
+
+  useEffect(() => {
+    if (selectedBooking && user?.role === 'owner') {
+      const fetchProviderDetails = async () => {
+        try {
+          const usersRef = collection(db, "users");
+          const q = query(usersRef, where("email", "==", selectedBooking.providerEmail));
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            setProviderDetails(snapshot.docs[0].data());
+          }
+        } catch (error) {
+          console.error("Error fetching provider details:", error);
+        }
+      };
+      fetchProviderDetails();
+    } else {
+      setProviderDetails(null);
+    }
+  }, [selectedBooking, user]);
 
   useEffect(() => {
     if (!isAuthReady) return;
@@ -104,18 +126,28 @@ export default function Dashboard() {
     }
   };
 
-  const updateBookingStatus = async (bookingId: string, newStatus: string) => {
+  const updateBookingStatus = async (bookingId: string, newStatus: string, time?: string) => {
     try {
-      await updateDoc(doc(db, "bookings", bookingId), { status: newStatus });
+      const updateData: any = { status: newStatus };
+      if (time) {
+        updateData.time = time;
+      }
+      
+      await updateDoc(doc(db, "bookings", bookingId), updateData);
       
       const bookingToUpdate = bookings.find(b => b.id === bookingId);
       
       if (bookingToUpdate && bookingToUpdate.userEmail) {
         const notificationId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+        let message = `Your booking for ${bookingToUpdate.service} with ${bookingToUpdate.provider} has been ${newStatus}.`;
+        if (time) {
+          message += ` Scheduled time: ${time}.`;
+        }
+        
         await setDoc(doc(db, "notifications", notificationId), {
           id: notificationId,
           userEmail: bookingToUpdate.userEmail,
-          message: `Your booking for ${bookingToUpdate.service} with ${bookingToUpdate.provider} has been ${newStatus}.`,
+          message: message,
           read: false,
           timestamp: new Date().toISOString()
         });
@@ -138,21 +170,34 @@ export default function Dashboard() {
     }
   };
 
-  // Mock Data for charts based on role
+  // Calculate real earnings from bookings
+  const calculateEarnings = () => {
+    return bookings
+      .filter(b => b.status === 'Completed' || b.paymentStatus === 'Paid')
+      .reduce((total, b) => total + parseFloat(b.price || '0'), 0);
+  };
+
+  const calculateTotalRevenue = () => {
+    // Admin sees all completed/paid bookings
+    return bookings
+      .filter(b => b.status === 'Completed' || b.paymentStatus === 'Paid')
+      .reduce((total, b) => total + parseFloat(b.price || '0'), 0);
+  };
+
   const getStatsForRole = () => {
     if (user.role === 'admin') {
       return [
-        { label: "Total Users", value: "1,248", icon: <Users className="h-6 w-6" />, color: "bg-blue-100 text-blue-600" },
-        { label: "Appointments Today", value: "42", icon: <Calendar className="h-6 w-6" />, color: "bg-teal-100 text-teal-600" },
-        { label: "Total Revenue", value: "₹45,200", icon: <Activity className="h-6 w-6" />, color: "bg-purple-100 text-purple-600" },
-        { label: "Active Providers", value: "89", icon: <FileText className="h-6 w-6" />, color: "bg-orange-100 text-orange-600" },
+        { label: "Total Users", value: allUsers.length.toString(), icon: <Users className="h-6 w-6" />, color: "bg-blue-100 text-blue-600" },
+        { label: "Total Bookings", value: bookings.length.toString(), icon: <Calendar className="h-6 w-6" />, color: "bg-teal-100 text-teal-600" },
+        { label: "Total Revenue", value: `₹${calculateTotalRevenue()}`, icon: <Activity className="h-6 w-6" />, color: "bg-purple-100 text-purple-600" },
+        { label: "Active Providers", value: allUsers.filter(u => u.role !== 'owner' && u.role !== 'admin').length.toString(), icon: <FileText className="h-6 w-6" />, color: "bg-orange-100 text-orange-600" },
       ];
-    } else if (user.role === 'doctor' || user.role === 'hospital') {
+    } else if (user.role === 'doctor' || user.role === 'hospital' || user.role === 'trainer') {
       return [
-        { label: "My Patients", value: "156", icon: <Users className="h-6 w-6" />, color: "bg-blue-100 text-blue-600" },
-        { label: "Today's Appts", value: "8", icon: <Calendar className="h-6 w-6" />, color: "bg-teal-100 text-teal-600" },
-        { label: "Completed", value: "1,024", icon: <FileText className="h-6 w-6" />, color: "bg-purple-100 text-purple-600" },
-        { label: "Earnings", value: "₹12,400", icon: <Activity className="h-6 w-6" />, color: "bg-orange-100 text-orange-600" },
+        { label: "My Patients/Clients", value: new Set(bookings.map(b => b.userEmail)).size.toString(), icon: <Users className="h-6 w-6" />, color: "bg-blue-100 text-blue-600" },
+        { label: "Total Appts", value: bookings.length.toString(), icon: <Calendar className="h-6 w-6" />, color: "bg-teal-100 text-teal-600" },
+        { label: "Completed", value: bookings.filter(b => b.status === 'Completed').length.toString(), icon: <FileText className="h-6 w-6" />, color: "bg-purple-100 text-purple-600" },
+        { label: "Earnings", value: `₹${calculateEarnings()}`, icon: <Activity className="h-6 w-6" />, color: "bg-orange-100 text-orange-600" },
       ];
     }
     return [];
@@ -372,22 +417,20 @@ export default function Dashboard() {
               </div>
             ) : (
               <>
-                {/* Stats Grid for Admins/Doctors/Hospitals */}
-                {user.role !== 'trainer' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    {stats.map((stat) => (
-                      <div key={stat.label} className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-4">
-                        <div className={`p-4 rounded-xl ${stat.color} dark:bg-opacity-20`}>
-                          {stat.icon}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{stat.label}</p>
-                          <p className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</p>
-                        </div>
+                {/* Stats Grid for Admins/Doctors/Hospitals/Trainers */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                  {stats.map((stat) => (
+                    <div key={stat.label} className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-4">
+                      <div className={`p-4 rounded-xl ${stat.color} dark:bg-opacity-20`}>
+                        {stat.icon}
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <div>
+                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{stat.label}</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
                 {/* Charts */}
                 {user.role !== 'trainer' && (
@@ -426,7 +469,8 @@ export default function Dashboard() {
                           <th className="px-6 py-4 font-medium">Date</th>
                           <th className="px-6 py-4 font-medium">Price</th>
                           <th className="px-6 py-4 font-medium">Status</th>
-                          {user.role !== 'owner' && <th className="px-6 py-4 font-medium">Action</th>}
+                          <th className="px-6 py-4 font-medium">Payment</th>
+                          <th className="px-6 py-4 font-medium">Action</th>
                         </tr>
                       </thead>
                       <tbody className="text-sm">
@@ -442,32 +486,35 @@ export default function Dashboard() {
                                 {booking.status || 'Pending'}
                               </span>
                             </td>
-                            {user.role !== 'owner' && (
-                              <td className="px-6 py-4 flex items-center gap-2">
-                                <button
-                                  onClick={() => {
-                                    setSelectedBooking(booking);
-                                    setShowBookingModal(true);
-                                  }}
-                                  className="text-xs px-3 py-1 bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 rounded hover:bg-teal-200 dark:hover:bg-teal-900/50 transition-colors font-medium"
+                            <td className="px-6 py-4">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${booking.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'}`}>
+                                {booking.paymentStatus || 'Pending'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedBooking(booking);
+                                  setShowBookingModal(true);
+                                }}
+                                className="text-xs px-3 py-1 bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 rounded hover:bg-teal-200 dark:hover:bg-teal-900/50 transition-colors font-medium"
+                              >
+                                View Details
+                              </button>
+                              {user.role === 'admin' && (
+                                <button 
+                                  onClick={() => handleDeleteBooking(booking.id)}
+                                  className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                  title="Delete Booking"
                                 >
-                                  View Details
+                                  <Trash2 className="h-4 w-4" />
                                 </button>
-                                {user.role === 'admin' && (
-                                  <button 
-                                    onClick={() => handleDeleteBooking(booking.id)}
-                                    className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                    title="Delete Booking"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                )}
-                              </td>
-                            )}
+                              )}
+                            </td>
                           </tr>
                         )) : (
                           <tr>
-                            <td colSpan={user.role === 'admin' ? 7 : 6} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">No appointments found.</td>
+                            <td colSpan={user.role === 'admin' ? 8 : 7} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">No appointments found.</td>
                           </tr>
                         )}
                       </tbody>
@@ -520,6 +567,24 @@ export default function Dashboard() {
                     <p className="font-medium text-slate-900 dark:text-white">{selectedBooking.userAddress || 'N/A'}</p>
                   </div>
                 </div>
+                
+                {/* Communication Actions for Providers */}
+                {user.role !== 'owner' && user.role !== 'admin' && selectedBooking.userPhone && (
+                  <div className="flex gap-3 mt-4">
+                    <a 
+                      href={`tel:${selectedBooking.userPhone}`}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors font-medium"
+                    >
+                      <Phone className="h-4 w-4" /> Call Client
+                    </a>
+                    <a 
+                      href={`sms:${selectedBooking.userPhone}`}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors font-medium"
+                    >
+                      <MessageSquare className="h-4 w-4" /> Message
+                    </a>
+                  </div>
+                )}
               </div>
 
               {/* Pet Details */}
@@ -547,6 +612,51 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              {/* Provider Details for Owner */}
+              {user.role === 'owner' && providerDetails && (
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                    <UserCircle className="h-5 w-5 text-teal-600" /> Provider Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                    <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Name</p>
+                      <p className="font-medium text-slate-900 dark:text-white">{providerDetails.name || providerDetails.fullName || providerDetails.hospitalName || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Email</p>
+                      <p className="font-medium text-slate-900 dark:text-white">{providerDetails.email || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Phone Number</p>
+                      <p className="font-medium text-slate-900 dark:text-white">{providerDetails.phone || providerDetails.phoneNumber || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Address</p>
+                      <p className="font-medium text-slate-900 dark:text-white">{providerDetails.address || providerDetails.location || 'N/A'}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Communication Actions for Owners */}
+                  {(providerDetails.phone || providerDetails.phoneNumber) && (
+                    <div className="flex gap-3 mt-4">
+                      <a 
+                        href={`tel:${providerDetails.phone || providerDetails.phoneNumber}`}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors font-medium"
+                      >
+                        <Phone className="h-4 w-4" /> Call Provider
+                      </a>
+                      <a 
+                        href={`sms:${providerDetails.phone || providerDetails.phoneNumber}`}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors font-medium"
+                      >
+                        <MessageSquare className="h-4 w-4" /> Message
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Booking Details */}
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
@@ -566,8 +676,18 @@ export default function Dashboard() {
                     <p className="font-medium text-slate-900 dark:text-white">{selectedBooking.date}</p>
                   </div>
                   <div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Time</p>
+                    <p className="font-medium text-slate-900 dark:text-white">{selectedBooking.time || 'Not set'}</p>
+                  </div>
+                  <div>
                     <p className="text-sm text-slate-500 dark:text-slate-400">Price</p>
                     <p className="font-medium text-slate-900 dark:text-white">₹{selectedBooking.price}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Payment Status</p>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${selectedBooking.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'}`}>
+                      {selectedBooking.paymentStatus || 'Pending'}
+                    </span>
                   </div>
                   <div className="md:col-span-2">
                     <p className="text-sm text-slate-500 dark:text-slate-400">Current Status</p>
@@ -580,29 +700,50 @@ export default function Dashboard() {
             </div>
 
             {/* Action Buttons */}
-            {user.role !== 'owner' && (!selectedBooking.status || selectedBooking.status === 'Pending') && (
-              <div className="p-6 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3 bg-slate-50 dark:bg-slate-800/50 sticky bottom-0">
-                <button
-                  onClick={() => {
-                    updateBookingStatus(selectedBooking.id, 'Cancelled');
-                    setSelectedBooking({ ...selectedBooking, status: 'Cancelled' });
-                    setShowBookingModal(false);
-                  }}
-                  className="px-6 py-2 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 rounded-lg font-medium transition-colors flex items-center gap-2"
-                >
-                  <span>❌</span> Reject Booking
-                </button>
+            {user.role !== 'owner' && user.role !== 'admin' && (!selectedBooking.status || selectedBooking.status === 'Pending') && (
+              <div className="p-6 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky bottom-0">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Set Appointment Time</label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <input
+                      type="time"
+                      value={appointmentTime}
+                      onChange={(e) => setAppointmentTime(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Please set a time before confirming the appointment.</p>
+                </div>
                 
-                <button
-                  onClick={() => {
-                    updateBookingStatus(selectedBooking.id, 'Confirmed');
-                    setSelectedBooking({ ...selectedBooking, status: 'Confirmed' });
-                    setShowBookingModal(false);
-                  }}
-                  className="px-6 py-2 bg-teal-600 text-white hover:bg-teal-700 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm"
-                >
-                  <span>✅</span> Accept Booking
-                </button>
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => {
+                      updateBookingStatus(selectedBooking.id, 'Cancelled');
+                      setSelectedBooking({ ...selectedBooking, status: 'Cancelled' });
+                      setShowBookingModal(false);
+                    }}
+                    className="px-6 py-2 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  >
+                    <span>❌</span> Reject Booking
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      if (!appointmentTime) {
+                        showNotification('Please set an appointment time', 'error');
+                        return;
+                      }
+                      updateBookingStatus(selectedBooking.id, 'Confirmed', appointmentTime);
+                      setSelectedBooking({ ...selectedBooking, status: 'Confirmed', time: appointmentTime });
+                      setShowBookingModal(false);
+                      setAppointmentTime('');
+                    }}
+                    className="px-6 py-2 bg-teal-600 text-white hover:bg-teal-700 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm"
+                  >
+                    <span>✅</span> Accept & Set Time
+                  </button>
+                </div>
               </div>
             )}
 
