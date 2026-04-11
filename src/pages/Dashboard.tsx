@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useNotification } from "../context/NotificationContext";
 import { db } from "../firebase";
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, setDoc, getDocs } from "firebase/firestore";
-import { demoProviders } from "../data/mockProviders";
+import { mockProviders } from "../data/mockProviders";
 
 export default function Dashboard() {
   const { user, isAuthReady } = useAuth();
@@ -254,7 +254,7 @@ export default function Dashboard() {
     { name: 'Cancelled', value: statusCounts.cancelled },
   ];
 
-  const providerNameById = new Map<string, string>(demoProviders.map((p: any) => [p.id, p.name]));
+  const providerNameById = new Map<string, string>(mockProviders.map((p: any) => [p.id, p.name]));
 
   const filteredBookings = bookings.filter(b => {
     if (bookingFilter === 'All') return true;

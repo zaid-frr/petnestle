@@ -7,7 +7,13 @@ import Markdown from "react-markdown";
 let aiClient: GoogleGenAI | null = null;
 const getAIClient = () => {
   if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const env = import.meta.env as Record<string, string | undefined>;
+    const apiKey =
+      env.GEMINI_API_KEY ||
+      env.VITE_GEMINI_API_KEY ||
+      process.env.GEMINI_API_KEY ||
+      process.env.VITE_GEMINI_API_KEY;
+
     if (!apiKey || apiKey === 'undefined' || apiKey === 'null' || apiKey === '') {
       console.error("GEMINI_API_KEY is missing. Chatbot will not work.");
       return null;
