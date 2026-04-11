@@ -29,6 +29,8 @@ export default function Dashboard() {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [appointmentTime, setAppointmentTime] = useState('');
   const [providerDetails, setProviderDetails] = useState<any>(null);
+  const [bookingFilter, setBookingFilter] = useState('All');
+  const [detailView, setDetailView] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedBooking && user?.role === 'owner') {
@@ -254,11 +256,196 @@ export default function Dashboard() {
 
   const providerNameById = new Map<string, string>(demoProviders.map((p: any) => [p.id, p.name]));
 
+  const filteredBookings = bookings.filter(b => {
+    if (bookingFilter === 'All') return true;
+    const status = b.status || 'Pending';
+    return status === bookingFilter;
+  });
+
+  const renderDetailContent = () => {
+    if (detailView === 'My Reviews') {
+      return (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+          {myReviews.length > 0 ? (
+            <div className="space-y-4">
+              {myReviews.map((review, idx) => (
+                <div key={idx} className="border-b border-slate-100 dark:border-slate-700 pb-4 last:border-0 last:pb-0">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-medium text-slate-900 dark:text-white">{review.providerName}</h4>
+                    <span className="text-amber-500">{'★'.repeat(review.rating)}{'☆'.repeat(5-review.rating)}</span>
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300 text-sm">{review.comment}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-slate-500 dark:text-slate-400 text-center py-8">No reviews yet.</p>
+          )}
+        </div>
+      );
+    }
+
+    if (detailView === 'My Patients/Clients') {
+      const uniqueEmails = Array.from(new Set(bookings.map(b => b.userEmail)));
+      const patients = uniqueEmails.map(email => bookings.find(b => b.userEmail === email));
+      return (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-sm border-b border-slate-100 dark:border-slate-700">
+                  <th className="px-6 py-4 font-medium">Client Name</th>
+                  <th className="px-6 py-4 font-medium">Pet Name</th>
+                  <th className="px-6 py-4 font-medium">Contact</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {patients.length > 0 ? patients.map((p, idx) => (
+                  <tr key={idx} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{p?.userName}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{p?.petName || 'N/A'}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{p?.userEmail}</td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">No clients found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    if (detailView === 'Total Users' || detailView === 'Active Providers') {
+      const filteredUsers = detailView === 'Active Providers' ? allUsers.filter(u => u.role !== 'owner' && u.role !== 'admin') : allUsers;
+      return (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-sm border-b border-slate-100 dark:border-slate-700">
+                  <th className="px-6 py-4 font-medium">Name</th>
+                  <th className="px-6 py-4 font-medium">Email</th>
+                  <th className="px-6 py-4 font-medium">Role</th>
+                  <th className="px-6 py-4 font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {filteredUsers.length > 0 ? filteredUsers.map((u, idx) => (
+                  <tr key={idx} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{u.name || 'N/A'}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{u.email}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300 capitalize">{u.role}</td>
+                    <td className="px-6 py-4">
+                      <button 
+                        onClick={() => {
+                          setSelectedAdminUser(u);
+                          setShowAdminUserModal(true);
+                        }}
+                        className="text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300 font-medium"
+                      >
+                        View Details
+                      </button>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">No users found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    // Default to Bookings table
+    let filtered = bookings;
+    if (detailView === 'Pending') filtered = bookings.filter(b => (b.status || 'Pending') === 'Pending');
+    if (detailView === 'Completed') filtered = bookings.filter(b => b.status === 'Completed');
+    if (detailView === 'Earnings' || detailView === 'Total Revenue') filtered = bookings.filter(b => b.status === 'Completed' || b.paymentStatus === 'Paid');
+
+    return (
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-sm border-b border-slate-100 dark:border-slate-700">
+                <th className="px-6 py-4 font-medium">Service</th>
+                <th className="px-6 py-4 font-medium">Client Name</th>
+                {user.role === 'admin' && <th className="px-6 py-4 font-medium">Provider</th>}
+                <th className="px-6 py-4 font-medium">Date</th>
+                <th className="px-6 py-4 font-medium">Price</th>
+                <th className="px-6 py-4 font-medium">Status</th>
+                <th className="px-6 py-4 font-medium">Payment</th>
+                <th className="px-6 py-4 font-medium">Action</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm">
+              {filtered.length > 0 ? filtered.map((booking, idx) => (
+                <tr key={idx} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{booking.serviceName}</td>
+                  <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{booking.userName}</td>
+                  {user.role === 'admin' && <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{providerNameById.get(booking.providerId) || booking.providerEmail}</td>}
+                  <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{booking.date} {booking.time && <span className="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded ml-2">{booking.time}</span>}</td>
+                  <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">₹{booking.price}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status || 'Pending')}`}>
+                      {booking.status || 'Pending'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${booking.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'}`}>
+                      {booking.paymentStatus || 'Pending'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <button 
+                      onClick={() => {
+                        setSelectedBooking(booking);
+                        setShowBookingModal(true);
+                      }}
+                      className="text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300 font-medium"
+                    >
+                      View Details
+                    </button>
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={user.role === 'admin' ? 8 : 7} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">
+                    No bookings found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="py-12 bg-slate-50 dark:bg-slate-900 min-h-screen transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8 2xl:px-12">
         
-        {/* User Profile Card */}
+        {detailView ? (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <button 
+              onClick={() => setDetailView(null)} 
+              className="mb-6 flex items-center gap-2 text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300 font-medium transition-colors"
+            >
+              ← Back to Dashboard
+            </button>
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-8">{detailView} Details</h2>
+            {renderDetailContent()}
+          </div>
+        ) : (
+          <>
+            {/* User Profile Card */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 mb-8 flex items-center gap-6">
           <div className="w-20 h-20 bg-teal-100 dark:bg-teal-900/50 rounded-full flex items-center justify-center text-teal-600 dark:text-teal-400 flex-shrink-0">
             <UserCircle className="h-12 w-12" />
@@ -292,19 +479,31 @@ export default function Dashboard() {
           <div className="space-y-8">
             {/* Owner Overview */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+              <div 
+                onClick={() => setDetailView('All')}
+                className={`bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border ${detailView === 'All' ? 'border-teal-500 ring-1 ring-teal-500' : 'border-slate-100 dark:border-slate-700'} cursor-pointer hover:shadow-md transition-all`}
+              >
                 <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Total Appointments</p>
                 <p className="text-3xl font-extrabold text-slate-900 dark:text-white mt-2">{bookings.length}</p>
               </div>
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+              <div 
+                onClick={() => setDetailView('Pending')}
+                className={`bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border ${detailView === 'Pending' ? 'border-amber-500 ring-1 ring-amber-500' : 'border-slate-100 dark:border-slate-700'} cursor-pointer hover:shadow-md transition-all`}
+              >
                 <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Pending</p>
                 <p className="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-2">{statusCounts.pending}</p>
               </div>
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+              <div 
+                onClick={() => setDetailView('Completed')}
+                className={`bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border ${detailView === 'Completed' ? 'border-green-500 ring-1 ring-green-500' : 'border-slate-100 dark:border-slate-700'} cursor-pointer hover:shadow-md transition-all`}
+              >
                 <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Completed</p>
                 <p className="text-3xl font-extrabold text-green-600 dark:text-green-400 mt-2">{statusCounts.completed}</p>
               </div>
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+              <div 
+                onClick={() => setDetailView('My Reviews')}
+                className={`bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border ${detailView === 'My Reviews' ? 'border-purple-500 ring-1 ring-purple-500' : 'border-slate-100 dark:border-slate-700'} cursor-pointer hover:shadow-md transition-all`}
+              >
                 <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">My Reviews</p>
                 <p className="text-3xl font-extrabold text-slate-900 dark:text-white mt-2">{myReviews.length}</p>
               </div>
@@ -557,17 +756,26 @@ export default function Dashboard() {
               <>
                 {/* Stats Grid for Admins/Doctors/Hospitals/Trainers */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                  {stats.map((stat) => (
-                    <div key={stat.label} className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-4">
-                      <div className={`p-4 rounded-xl ${stat.color} dark:bg-opacity-20`}>
-                        {stat.icon}
+                  {stats.map((stat) => {
+                    const filterValue = stat.label === 'Total Appts' || stat.label === 'Total Bookings' ? 'All' : stat.label;
+                    const isActive = detailView === filterValue;
+                    
+                    return (
+                      <div 
+                        key={stat.label} 
+                        onClick={() => setDetailView(filterValue)}
+                        className={`bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border flex items-center gap-4 cursor-pointer hover:shadow-md transition-all ${isActive ? 'border-teal-500 ring-1 ring-teal-500' : 'border-slate-100 dark:border-slate-700'}`}
+                      >
+                        <div className={`p-4 rounded-xl ${stat.color} dark:bg-opacity-20`}>
+                          {stat.icon}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{stat.label}</p>
+                          <p className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{stat.label}</p>
-                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Charts */}
@@ -609,10 +817,23 @@ export default function Dashboard() {
 
                 {/* Recent Bookings Table */}
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-                  <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700">
+                  <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                       {user.role === 'admin' ? 'All Platform Bookings' : 'Your Appointments'}
                     </h2>
+                    {user.role !== 'admin' && (
+                      <div className="flex gap-2 bg-slate-100 dark:bg-slate-900/50 p-1 rounded-lg">
+                        {['All', 'Pending', 'Confirmed', 'Completed'].map(status => (
+                          <button
+                            key={status}
+                            onClick={() => setBookingFilter(status)}
+                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${bookingFilter === status ? 'bg-white dark:bg-slate-700 text-teal-600 dark:text-teal-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+                          >
+                            {status}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -629,7 +850,7 @@ export default function Dashboard() {
                         </tr>
                       </thead>
                       <tbody className="text-sm">
-                        {bookings.length > 0 ? bookings.map((booking, idx) => (
+                        {filteredBookings.length > 0 ? filteredBookings.map((booking, idx) => (
                           <tr key={idx} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                             <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{booking.serviceName}</td>
                             <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{booking.userName}</td>
@@ -678,6 +899,8 @@ export default function Dashboard() {
                 </div>
               </>
             )}
+          </>
+        )}
           </>
         )}
       </div>
@@ -832,7 +1055,7 @@ export default function Dashboard() {
                 </div>
                 
                 {/* Communication Actions for Providers */}
-                {user.role !== 'owner' && user.role !== 'admin' && selectedBooking.userPhone && (
+                {user.role !== 'owner' && user.role !== 'admin' && selectedBooking.userPhone && (selectedBooking.status === 'Confirmed' || selectedBooking.status === 'Completed') && (
                   <div className="flex gap-3 mt-4">
                     <a 
                       href={`tel:${selectedBooking.userPhone}`}
@@ -841,7 +1064,7 @@ export default function Dashboard() {
                       <Phone className="h-4 w-4" /> Call Client
                     </a>
                     <a 
-                      href={`sms:${selectedBooking.userPhone}`}
+                      href={`mailto:${selectedBooking.userEmail}`}
                       className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors font-medium"
                     >
                       <MessageSquare className="h-4 w-4" /> Message
@@ -901,7 +1124,7 @@ export default function Dashboard() {
                   </div>
                   
                   {/* Communication Actions for Owners */}
-                  {(providerDetails.phone || providerDetails.phoneNumber) && (
+                  {(providerDetails.phone || providerDetails.phoneNumber) && (selectedBooking.status === 'Confirmed' || selectedBooking.status === 'Completed') && (
                     <div className="flex gap-3 mt-4">
                       <a 
                         href={`tel:${providerDetails.phone || providerDetails.phoneNumber}`}
@@ -910,7 +1133,7 @@ export default function Dashboard() {
                         <Phone className="h-4 w-4" /> Call Provider
                       </a>
                       <a 
-                        href={`sms:${providerDetails.phone || providerDetails.phoneNumber}`}
+                        href={`mailto:${providerDetails.email}`}
                         className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors font-medium"
                       >
                         <MessageSquare className="h-4 w-4" /> Message
@@ -1007,6 +1230,21 @@ export default function Dashboard() {
                     <span>✅</span> Accept & Set Time
                   </button>
                 </div>
+              </div>
+            )}
+
+            {user.role !== 'owner' && user.role !== 'admin' && selectedBooking.status === 'Confirmed' && (
+              <div className="p-6 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3 bg-slate-50 dark:bg-slate-800/50 sticky bottom-0">
+                <button
+                  onClick={() => {
+                    updateBookingStatus(selectedBooking.id, 'Completed');
+                    setSelectedBooking({ ...selectedBooking, status: 'Completed' });
+                    setShowBookingModal(false);
+                  }}
+                  className="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm"
+                >
+                  <span>✓</span> Mark as Completed
+                </button>
               </div>
             )}
 

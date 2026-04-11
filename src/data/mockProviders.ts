@@ -1,165 +1,69 @@
-const vetFirstNames = ['Aarav', 'Ananya', 'Ishaan', 'Meera', 'Vihaan', 'Kavya', 'Arjun', 'Diya', 'Reyansh', 'Saanvi'];
-const vetLastNames = ['Sharma', 'Iyer', 'Reddy', 'Patel', 'Kapoor', 'Nair', 'Gupta', 'Khan', 'Mehta', 'Das'];
-const trainerFirstNames = ['Amit', 'Sneha', 'Rohit', 'Neha', 'Karan', 'Pooja', 'Rahul', 'Ira', 'Vikram', 'Tanya'];
-const trainerLastNames = ['Singh', 'Joshi', 'Desai', 'Chopra', 'Banerjee', 'Bhat', 'Saxena', 'Malhotra', 'Sethi', 'Rana'];
-const cityAreas = [
-  'Indiranagar, Bengaluru',
-  'Andheri West, Mumbai',
-  'Banjara Hills, Hyderabad',
-  'Koramangala, Bengaluru',
-  'Powai, Mumbai',
-  'Jubilee Hills, Hyderabad',
-  'Connaught Place, New Delhi',
-  'Anna Nagar, Chennai',
-  'Salt Lake, Kolkata',
-  'Koregaon Park, Pune',
-];
-
-const vetSpecializations = [
-  'General Veterinary Medicine',
-  'Veterinary Surgery',
-  'Veterinary Dentistry',
-  'Veterinary Dermatology',
-  'Emergency & Critical Care',
-];
-
-const trainingTypes = [
-  'Obedience Training',
-  'Agility Training',
-  'Behavioral Modification',
-  'Puppy Training',
-  'Service Dog Training',
-];
-
-const randomUserPortrait = (index: number) => {
-  // Stable real-person portraits for mock data (avoids random scenery images).
-  // 0-99 supported.
-  const n = (index % 100);
-  const gender = index % 2 === 0 ? 'women' : 'men';
-  return `https://randomuser.me/api/portraits/${gender}/${n}.jpg`;
-};
-
-const unsplashRandom = (keywords: string, sig: string | number) =>
-  `https://source.unsplash.com/600x600/?${encodeURIComponent(keywords)}&sig=${encodeURIComponent(String(sig))}`;
-
-const dogBreeds = ['Labrador Retriever', 'Golden Retriever', 'German Shepherd', 'Beagle', 'Pug', 'Shih Tzu', 'Indie dog'];
-const clinicBackgrounds = ['modern veterinary clinic', 'pet hospital lobby', 'consultation room', 'clinic reception'];
-const portraitStyles = ['soft studio lighting', 'natural window light', 'cinematic lighting', 'bright clean lighting'];
-const hospitalNames = [
-  'GreenCross Animal Hospital',
-  'CityPaws Emergency Vet Center',
-  'Apollo Pet Hospital',
-  'BlueVet 24x7 Hospital',
-  'Care & Cure Animal Hospital',
-  'Happy Paws Pet Hospital',
-  'Central Veterinary Hospital',
-  'Metro Animal Care Hospital',
-];
-const daycareNames = [
-  'Happy Tails Daycare',
-  'Paws & Play Daycare',
-  'FurEver Friends Daycare',
-  'Wag & Woof Boarding',
-  'Purr & Paws Care',
-  'TailTown Pet Daycare',
-  'SnuggleStay Boarding',
-  'PlayPaws Pet Care',
-];
-
-export const demoProviders = [
+export const mockProviders = [
   // Doctors (15)
-  ...Array.from({ length: 15 }).map((_, i) => {
-    const fullName = `Dr. ${vetFirstNames[i % vetFirstNames.length]} ${vetLastNames[i % vetLastNames.length]}`;
-    const specialization = vetSpecializations[i % vetSpecializations.length];
-    const experienceYears = (i % 14) + 2;
-    const fee = 300 + i * 50;
-    return {
-      id: `demo_vet_${i + 1}`,
-      name: fullName,
-      role: 'doctor',
-      email: `vet${i + 1}@petnestle.demo`,
-      phone: `+91 90000 0${(100 + i).toString().slice(-3)}`,
-      specialization,
-      experience: `${experienceYears}`,
-      charges: `${fee}`,
-      consultationFee: `${fee}`,
-      about: `Compassionate veterinarian focused on preventive care and clear guidance for pet parents. Specializes in ${specialization}.`,
-      photoURL: randomUserPortrait(i + 10),
-      rating: (4.4 + (i % 6) * 0.1).toFixed(1),
-      reviews: 22 + i * 4,
-      location: `PawCare Clinic • ${cityAreas[i % cityAreas.length]}`,
-    };
-  }),
-
+  ...Array.from({ length: 15 }).map((_, i) => ({
+    id: `mock_vet_${i + 1}`,
+    name: `Dr. Vet ${i + 1}`,
+    role: "doctor",
+    email: `vet${i + 1}@example.com`,
+    phone: `+123456789${i.toString().padStart(2, '0')}`,
+    specialization: ["General Veterinary Medicine", "Veterinary Surgery", "Veterinary Dentistry", "Veterinary Dermatology", "Emergency & Critical Care"][i % 5],
+    experience: `${(i % 15) + 2}`,
+    consultationFee: `${300 + (i * 50)}`,
+    about: `Experienced veterinarian dedicated to providing compassionate care for all pets. Specializing in ${["General Veterinary Medicine", "Veterinary Surgery", "Veterinary Dentistry", "Veterinary Dermatology", "Emergency & Critical Care"][i % 5]}.`,
+    photoURL: `https://images.unsplash.com/photo-${1559839734 + i}-2b71ea197ec2?auto=format&fit=crop&q=80&w=300&h=300`,
+    rating: (4.0 + (i % 10) * 0.1).toFixed(1),
+    reviews: 20 + i * 5,
+    location: `City Animal Clinic ${i + 1}`
+  })),
+  
   // Trainers (15)
-  ...Array.from({ length: 15 }).map((_, i) => {
-    const fullName = `${trainerFirstNames[i % trainerFirstNames.length]} ${trainerLastNames[i % trainerLastNames.length]}`;
-    const trainingType = trainingTypes[i % trainingTypes.length];
-    const experienceYears = (i % 10) + 1;
-    const fee = 200 + i * 30;
-    const breed = dogBreeds[i % dogBreeds.length];
-    return {
-      id: `demo_trainer_${i + 1}`,
-      name: fullName,
-      role: 'trainer',
-      email: `trainer${i + 1}@petnestle.demo`,
-      phone: `+91 98888 0${(100 + i).toString().slice(-3)}`,
-      experience: `${experienceYears}`,
-      charges: `${fee}`,
-      consultationFee: `${fee}`,
-      trainingType,
-      trainingTypes: trainingType,
-      about: `Certified trainer using positive reinforcement to build calm, confident behavior. Customized plans for each pet.`,
-      photoURL: randomUserPortrait(i + 40),
-      rating: (4.5 + (i % 5) * 0.1).toFixed(1),
-      reviews: 16 + i * 3,
-      location: `Training Hub • ${cityAreas[(i + 3) % cityAreas.length]}`,
-    };
-  }),
+  ...Array.from({ length: 15 }).map((_, i) => ({
+    id: `mock_trainer_${i + 1}`,
+    name: `Trainer ${i + 1}`,
+    role: "trainer",
+    email: `trainer${i + 1}@example.com`,
+    phone: `+198765432${i.toString().padStart(2, '0')}`,
+    experience: `${(i % 10) + 1}`,
+    consultationFee: `${200 + (i * 30)}`,
+    trainingTypes: ["Obedience Training", "Agility Training", "Behavioral Modification", "Puppy Training", "Service Dog Training"][i % 5],
+    about: `Certified dog trainer specializing in positive reinforcement techniques.`,
+    photoURL: `https://images.unsplash.com/photo-${1537151608804 + i}-ea2f1ea290d0?auto=format&fit=crop&q=80&w=300&h=300`,
+    rating: (4.2 + (i % 8) * 0.1).toFixed(1),
+    reviews: 15 + i * 3,
+    location: `Paws & Play Center ${i + 1}`
+  })),
 
   // Hospitals (15)
-  ...Array.from({ length: 15 }).map((_, i) => {
-    const hospitalName = `${hospitalNames[i % hospitalNames.length]} ${i + 1}`;
-    const fee = 600 + i * 80;
-    const style = ['glass facade', 'brick facade', 'modern white building', 'urban clinic exterior'][i % 4];
-    return {
-      id: `demo_hospital_${i + 1}`,
-      name: hospitalName,
-      role: 'hospital',
-      email: `hospital${i + 1}@petnestle.demo`,
-      phone: `+91 97777 0${(100 + i).toString().slice(-3)}`,
-      experience: `${(i % 20) + 5}`,
-      charges: `${fee}`,
-      consultationFee: `${fee}`,
-      emergencyServices: i % 2 === 0,
-      bedCapacity: `${30 + i * 5}`,
-      about: `Comprehensive veterinary hospital with modern diagnostics, surgery, and emergency care. Compassion-first team.`,
-      photoURL: unsplashRandom('hospital,building,clinic', `hospital-${i + 1}`),
-      rating: (4.3 + (i % 6) * 0.1).toFixed(1),
-      reviews: 60 + i * 9,
-      location: `${cityAreas[(i + 6) % cityAreas.length]}`,
-    };
-  }),
+  ...Array.from({ length: 15 }).map((_, i) => ({
+    id: `mock_hospital_${i + 1}`,
+    name: `Pet Hospital ${i + 1}`,
+    role: "hospital",
+    email: `hospital${i + 1}@example.com`,
+    phone: `+155566677${i.toString().padStart(2, '0')}`,
+    experience: `${(i % 20) + 5}`,
+    consultationFee: `${500 + (i * 100)}`,
+    emergencyServices: i % 2 === 0,
+    bedCapacity: `${20 + i * 10}`,
+    about: `24/7 emergency care and comprehensive veterinary services. State of the art facilities.`,
+    photoURL: `https://images.unsplash.com/photo-${1583337130417 + i}-3346a1be7dee?auto=format&fit=crop&q=80&w=300&h=300`,
+    rating: (4.1 + (i % 9) * 0.1).toFixed(1),
+    reviews: 50 + i * 10,
+    location: `Westside Avenue ${i + 1}`
+  })),
 
   // Pet Care (15)
-  ...Array.from({ length: 15 }).map((_, i) => {
-    const businessName = `${daycareNames[i % daycareNames.length]} ${i + 1}`;
-    const fee = 180 + i * 25;
-    const room = ['indoor play area', 'outdoor play yard', 'boarding room', 'grooming station'][i % 4];
-    return {
-      id: `demo_petcare_${i + 1}`,
-      name: businessName,
-      role: 'pet_care',
-      email: `petcare${i + 1}@petnestle.demo`,
-      phone: `+91 96666 0${(100 + i).toString().slice(-3)}`,
-      experience: `${(i % 8) + 1}`,
-      charges: `${fee}`,
-      consultationFee: `${fee}`,
-      about: `Safe, clean, and fun daycare with supervised play, rest breaks, and daily updates for pet parents.`,
-      photoURL: unsplashRandom('dogs,daycare,pet', `petcare-${i + 1}`),
-      rating: (4.4 + (i % 5) * 0.1).toFixed(1),
-      reviews: 28 + i * 4,
-      location: `${cityAreas[(i + 1) % cityAreas.length]}`,
-    };
-  }),
+  ...Array.from({ length: 15 }).map((_, i) => ({
+    id: `mock_care_${i + 1}`,
+    name: `Pet Care Services ${i + 1}`,
+    role: "pet_care",
+    email: `care${i + 1}@example.com`,
+    phone: `+144433322${i.toString().padStart(2, '0')}`,
+    experience: `${(i % 8) + 1}`,
+    consultationFee: `${150 + (i * 20)}`,
+    about: `Safe and fun environment for your pets while you are away. Daycare and boarding.`,
+    photoURL: `https://images.unsplash.com/photo-${1601758228041 + i}-f3b2795255f1?auto=format&fit=crop&q=80&w=300&h=300`,
+    rating: (4.3 + (i % 7) * 0.1).toFixed(1),
+    reviews: 30 + i * 4,
+    location: `North Suburbs ${i + 1}`
+  }))
 ];

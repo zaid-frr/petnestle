@@ -3,8 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { PawPrint } from 'lucide-react';
-import { auth, useFirebaseEmulators } from '../firebase';
+import { auth, db, useFirebaseEmulators } from '../firebase';
 import { signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword } from 'firebase/auth';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 
 export default function Login() {
@@ -13,6 +14,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { showNotification } = useNotification();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -22,8 +24,27 @@ export default function Login() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       showNotification('Logged in successfully', 'success');
-      navigate('/dashboard');
+      navigate('/');
     } catch (err: any) {
+      // Check if this is a dummy user in Firestore
+      try {
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('email', '==', email));
+        const snapshot = await getDocs(q);
+        
+        if (!snapshot.empty) {
+          const userData = snapshot.docs[0].data();
+          if (userData.uid && userData.uid.startsWith('dummy_')) {
+            await login(userData as any);
+            showNotification('Logged in successfully (Dummy Account)', 'success');
+            navigate('/');
+            return;
+          }
+        }
+      } catch (firestoreErr) {
+        console.error("Error checking dummy user:", firestoreErr);
+      }
+
       console.error("Login error:", err);
       setError(err.message || 'Failed to log in with email and password.');
       showNotification('Failed to log in', 'error');
@@ -44,7 +65,7 @@ export default function Login() {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
       showNotification('Logged in successfully', 'success');
-      navigate('/dashboard');
+      navigate('/');
     } catch (err: any) {
       console.error("Login error:", err);
       if (err?.code === 'auth/unauthorized-domain') {

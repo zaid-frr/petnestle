@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
 import { db } from "../firebase";
 import { collection, query, where, getDocs, setDoc, doc, onSnapshot } from "firebase/firestore";
-import { demoProviders } from "../data/mockProviders";
+import { mockProviders } from "../data/mockProviders";
 
 const serviceDetailsMap: Record<string, any> = {
   vaccination: { name: "Vaccination", description: "Keep your pets safe from preventable diseases.", price: "₹500", duration: "30 mins" },
@@ -54,7 +54,7 @@ export default function Providers() {
           
           if (mockSnapshot.empty) {
             console.log("Adding mock providers to database...");
-            for (const provider of demoProviders) {
+            for (const provider of mockProviders) {
               await setDoc(doc(db, "users", provider.id), {
                 ...provider,
                 isMock: true,
@@ -66,33 +66,20 @@ export default function Providers() {
           console.error("Error seeding mock providers (might be permission issue):", seedError);
         }
 
-        // Always have local demo data as a baseline so the UI never looks empty.
-        // If Firestore returns a smaller set, we MERGE it on top (instead of replacing),
-        // so you still see the full demo list.
-        let allUsers: any[] = [...demoProviders];
+        let allUsers: any[] = [];
         try {
           const usersRef = collection(db, "users");
           const q = query(usersRef, where("role", "in", ["doctor", "trainer", "hospital", "pet_care"]));
           const usersSnapshot = await getDocs(q);
-          const fetched = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          if (fetched.length > 0) {
-            const byId = new Map<string, any>();
-            for (const u of demoProviders) byId.set(u.id, u);
-            for (const u of fetched) {
-              // Merge: Firestore data overrides demo fields for same id
-              const prev = byId.get(u.id);
-              byId.set(u.id, prev ? { ...prev, ...u } : u);
-            }
-            allUsers = Array.from(byId.values());
-          }
+          allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (fetchError) {
           console.error("Error fetching from Firestore, falling back to local mock data:", fetchError);
-          // keep local demo data
+          allUsers = [...mockProviders];
         }
 
         // If still empty (e.g. Firestore worked but was empty and seeding failed), use mock data
         if (allUsers.length === 0) {
-          allUsers = [...demoProviders];
+          allUsers = [...mockProviders];
         }
 
         const registeredDoctors = allUsers.filter((u: any) => u.role === 'doctor' || u.role === 'Doctor').map((d: any) => ({
@@ -141,53 +128,6 @@ export default function Providers() {
           initialProviders = [...registeredPetCare, ...registeredTrainers];
         } else if (serviceId === 'emergency') {
           initialProviders = [...registeredHospitals];
-        }
-
-        // Final safety fallback: if Firestore data is present but not shaped as expected,
-        // ensure demo providers always appear so the page doesn't look empty.
-        if (initialProviders.length === 0) {
-          const demoDoctors = demoProviders
-            .filter((u: any) => u.role === 'doctor')
-            .map((d: any) => ({
-              ...d,
-              name: d.name || d.fullName || 'Doctor',
-              role: 'Doctor',
-              image: d.photoURL || d.image,
-            }));
-          const demoTrainers = demoProviders
-            .filter((u: any) => u.role === 'trainer')
-            .map((t: any) => ({
-              ...t,
-              name: t.name || t.fullName || 'Trainer',
-              role: 'Trainer',
-              image: t.photoURL || t.image,
-            }));
-          const demoHospitals = demoProviders
-            .filter((u: any) => u.role === 'hospital')
-            .map((h: any) => ({
-              ...h,
-              name: h.name || h.hospitalName || 'Hospital',
-              role: 'Hospital',
-              image: h.photoURL || h.image,
-            }));
-          const demoPetCare = demoProviders
-            .filter((u: any) => u.role === 'pet_care')
-            .map((p: any) => ({
-              ...p,
-              name: p.name || p.fullName || 'Pet Care',
-              role: 'Pet Care',
-              image: p.photoURL || p.image,
-            }));
-
-          if (serviceId === 'vaccination' || serviceId === 'checkup') {
-            initialProviders = demoDoctors;
-          } else if (serviceId === 'training') {
-            initialProviders = demoTrainers;
-          } else if (serviceId === 'grooming') {
-            initialProviders = [...demoPetCare, ...demoTrainers];
-          } else if (serviceId === 'emergency') {
-            initialProviders = demoHospitals;
-          }
         }
 
         setProviders(initialProviders);
@@ -239,20 +179,6 @@ export default function Providers() {
 
     setFilteredProviders(result);
   }, [searchTerm, roleFilter, experienceFilter, providers]);
-
-  const getProviderImageSrc = (provider: any) => {
-    return (
-      provider.image ||
-      provider.photoURL ||
-      `https://picsum.photos/seed/${encodeURIComponent(provider.id || provider.email || provider.name || "provider")}/600/600`
-    );
-  };
-
-  const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>, provider: any) => {
-    const img = e.currentTarget;
-    const fallback = `https://picsum.photos/seed/${encodeURIComponent(provider.id || provider.email || provider.name || "provider")}/600/600`;
-    if (img.src !== fallback) img.src = fallback;
-  };
 
   const handleBook = (provider: any) => {
     if (!user) {
@@ -431,12 +357,10 @@ export default function Providers() {
                 <div className="flex flex-col items-center px-6">
                   <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white dark:border-slate-800 shadow-md mb-4 relative">
                     <img 
-                      src={getProviderImageSrc(provider)} 
+                      src={provider.image} 
                       alt={provider.name} 
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
-                      loading="lazy"
-                      onError={(e) => handleImgError(e, provider)}
                     />
                   </div>
                   <div className="absolute top-4 right-4 flex items-center gap-1 text-amber-500 bg-amber-50 dark:bg-amber-500/10 px-2 py-1 rounded shadow-sm">
@@ -652,12 +576,10 @@ export default function Providers() {
               <div className="p-6 space-y-6">
                 <div className="flex flex-col sm:flex-row gap-6 items-start">
                   <img 
-                    src={getProviderImageSrc(detailsModalProvider)} 
+                    src={detailsModalProvider.image || detailsModalProvider.photoURL} 
                     alt={detailsModalProvider.name} 
                     className="w-32 h-32 rounded-2xl object-cover shadow-sm"
                     referrerPolicy="no-referrer"
-                    loading="lazy"
-                    onError={(e) => handleImgError(e, detailsModalProvider)}
                   />
                   <div>
                     <h4 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{detailsModalProvider.name}</h4>

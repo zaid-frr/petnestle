@@ -93,7 +93,7 @@ export default function Profile() {
       photoURL: user.photoURL || user.image || '',
       specialization: user.specialization || '',
       experience: user.experience || '',
-      consultationFee: user.consultationFee || '',
+      consultationFee: user.consultationFee || user.charges || '',
       about: user.about || '',
       userAbout: user.userAbout || '',
       emergencyServices: user.emergencyServices || false,
@@ -180,11 +180,13 @@ export default function Profile() {
     if (user?.role === "trainer") {
       req("Training Types", formData.trainingTypes);
       req("Experience (Years)", formData.experience);
+      req("Service Fee (₹)", formData.consultationFee);
       req("Professional Bio", formData.about);
     }
 
     if (user?.role === "hospital") {
       req("Bed Capacity", formData.bedCapacity);
+      req("Service Fee (₹)", formData.consultationFee);
       req("Professional Bio", formData.about);
     }
 
@@ -221,6 +223,7 @@ export default function Profile() {
         specialization: formData.specialization,
         experience: formData.experience,
         consultationFee: formData.consultationFee,
+        charges: formData.consultationFee,
         about: formData.about,
         userAbout: formData.userAbout,
         emergencyServices: formData.emergencyServices,
@@ -366,7 +369,7 @@ export default function Profile() {
 
   return (
     <div className="py-16 bg-slate-50 dark:bg-slate-900 min-h-screen transition-colors duration-200">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 2xl:px-12">
         <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
           {/* Header */}
           <div className="bg-teal-600 px-8 py-12 text-center relative">
@@ -807,6 +810,21 @@ export default function Profile() {
                       />
                     </div>
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Service Fee (₹)</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-slate-400">₹</span>
+                      <input
+                        type="number"
+                        name="consultationFee"
+                        value={formData.consultationFee}
+                        onChange={handleChange}
+                        disabled={!isEditing}
+                        placeholder="e.g. 500"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none disabled:opacity-70 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -823,6 +841,21 @@ export default function Profile() {
                         onChange={handleChange}
                         disabled={!isEditing}
                         placeholder="e.g. 50"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none disabled:opacity-70 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Service Fee (₹)</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-slate-400">₹</span>
+                      <input
+                        type="number"
+                        name="consultationFee"
+                        value={formData.consultationFee}
+                        onChange={handleChange}
+                        disabled={!isEditing}
+                        placeholder="e.g. 1000"
                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none disabled:opacity-70 disabled:cursor-not-allowed"
                       />
                     </div>
