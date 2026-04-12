@@ -12,7 +12,8 @@ const serviceDetailsMap: Record<string, any> = {
   checkup: { name: "General Checkup", description: "Routine health examinations.", price: "₹300", duration: "45 mins" },
   emergency: { name: "Emergency Care", description: "24/7 emergency services.", price: "₹1500", duration: "Immediate" },
   training: { name: "Pet Training", description: "Professional training services.", price: "₹1000", duration: "60 mins" },
-  grooming: { name: "Pet Grooming", description: "Professional grooming services.", price: "₹800", duration: "90 mins" }
+  grooming: { name: "Pet Grooming", description: "Professional grooming services.", price: "₹800", duration: "90 mins" },
+  petcare: { name: "Pet Care & Daycare", description: "Safe, reliable daycare and boarding services for pets while owners are away.", price: "₹800", duration: "Full day" }
 };
 
 export default function Providers() {
@@ -72,13 +73,16 @@ export default function Providers() {
           const q = query(usersRef, where("role", "in", ["doctor", "trainer", "hospital", "pet_care"]));
           const usersSnapshot = await getDocs(q);
           allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          allUsers = allUsers.map((userDoc: any) => {
+            const localMock = mockProviders.find((mock) => mock.id === userDoc.id);
+            return localMock ? { ...userDoc, ...localMock } : userDoc;
+          });
+
+          if (allUsers.length === 0) {
+            allUsers = [...mockProviders];
+          }
         } catch (fetchError) {
           console.error("Error fetching from Firestore, falling back to local mock data:", fetchError);
-          allUsers = [...mockProviders];
-        }
-
-        // If still empty (e.g. Firestore worked but was empty and seeding failed), use mock data
-        if (allUsers.length === 0) {
           allUsers = [...mockProviders];
         }
 
@@ -124,7 +128,7 @@ export default function Providers() {
           initialProviders = [...registeredDoctors];
         } else if (serviceId === 'training') {
           initialProviders = [...registeredTrainers];
-        } else if (serviceId === 'grooming') {
+        } else if (serviceId === 'petcare') {
           initialProviders = [...registeredPetCare, ...registeredTrainers];
         } else if (serviceId === 'emergency') {
           initialProviders = [...registeredHospitals];
@@ -205,6 +209,7 @@ export default function Providers() {
     // Simulate payment processing
     setTimeout(async () => {
       const bookingId = Date.now().toString();
+      const currentUser: any = user ?? {};
       const newBooking = {
         id: bookingId,
         serviceId,
@@ -217,15 +222,15 @@ export default function Providers() {
         status: 'Pending',
         paymentStatus: 'Paid',
         date: new Date().toLocaleDateString(),
-        userEmail: user.email,
-        userName: user.name,
-        userPhone: user.phoneNumber || '',
-        userAddress: user.address || '',
-        userRole: user.role || '',
-        petName: user.petName || '',
-        petType: user.petType || '',
-        petAge: user.petAge || '',
-        vaccinationStatus: user.vaccinationStatus || ''
+        userEmail: currentUser.email || '',
+        userName: currentUser.name || '',
+        userPhone: currentUser.phoneNumber || '',
+        userAddress: currentUser.address || '',
+        userRole: currentUser.role || '',
+        petName: currentUser.petName || '',
+        petType: currentUser.petType || '',
+        petAge: currentUser.petAge || '',
+        vaccinationStatus: currentUser.vaccinationStatus || ''
       };
 
       try {
@@ -361,6 +366,11 @@ export default function Providers() {
                       alt={provider.name} 
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
+                      onError={(event) => {
+                        const target = event.currentTarget;
+                        target.onerror = null;
+                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(provider.name || 'Provider')}&background=0D8ABC&color=fff`;
+                      }}
                     />
                   </div>
                   <div className="absolute top-4 right-4 flex items-center gap-1 text-amber-500 bg-amber-50 dark:bg-amber-500/10 px-2 py-1 rounded shadow-sm">

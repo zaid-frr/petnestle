@@ -35,7 +35,7 @@ const serviceDetailsMap: Record<string, any> = {
     description: "24/7 emergency services for critical situations requiring immediate veterinary attention. Our hospitals are equipped for all urgencies.", 
     price: "₹1500", 
     duration: "Immediate",
-    image: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80&w=1200&h=600",
+    image: "https://images.unsplash.com/photo-1512636613085-7d01a0f67203?auto=format&fit=crop&q=80&w=1200&h=600",
     benefits: [
       "Available 24/7, 365 days a year",
       "State-of-the-art life-saving equipment",
@@ -68,6 +68,19 @@ const serviceDetailsMap: Record<string, any> = {
       "Early detection of skin issues or lumps",
       "Reduces shedding and allergens in the home"
     ]
+  },
+  petcare: {
+    name: "Pet Care & Daycare",
+    description: "Safe, reliable pet daycare and boarding services with playtime, rest, and attentive care while you are away.",
+    price: "₹800",
+    duration: "Full day",
+    image: "https://images.unsplash.com/photo-1598136491881-8042b84bf49b?auto=format&fit=crop&q=80&w=1200&h=600",
+    benefits: [
+      "Supervised play and rest",
+      "Daily feeding and care",
+      "Safe boarding environment",
+      "Experienced daycare staff"
+    ]
   }
 };
 
@@ -98,6 +111,11 @@ export default function ServiceDetails() {
           alt={service.name} 
           className="w-full h-full object-cover"
           referrerPolicy="no-referrer"
+          onError={(event) => {
+            const target = event.currentTarget;
+            target.onerror = null;
+            target.src = 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=1200&h=600';
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
         <div className="absolute bottom-0 left-0 w-full p-8 md:p-16">

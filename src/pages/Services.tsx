@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, Building2, Ambulance, GraduationCap, Scissors, ArrowRight } from "lucide-react";
+import { Search, Ambulance, GraduationCap, Scissors, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 
@@ -17,22 +17,13 @@ export default function Services() {
       image: "https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?auto=format&fit=crop&q=80&w=800&h=600"
     },
     {
-      id: 'checkup',
-      title: "Clinic & Hospital",
-      description: "Discover top-rated pet clinics and hospitals with advanced medical facilities and expert care teams.",
-      features: ["Advanced Facilities", "Expert Teams", "Emergency Care"],
-      icon: <Building2 className="h-5 w-5" />,
-      color: "bg-teal-400 text-white",
-      image: "https://images.unsplash.com/photo-1584467735815-f778f274e296?auto=format&fit=crop&q=80&w=800&h=600"
-    },
-    {
       id: 'emergency',
       title: "Emergency Care",
-      description: "24/7 emergency services for critical situations requiring immediate veterinary attention. Our hospitals are equipped for all urgencies.",
+      description: "24/7 emergency veterinary support for urgent pet situations. Fast response and expert critical care when it matters most.",
       features: ["24/7 Availability", "Critical Care", "Immediate Response"],
       icon: <Ambulance className="h-5 w-5" />,
       color: "bg-teal-400 text-white",
-      image: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80&w=800&h=600"
+      image: "https://images.unsplash.com/photo-1556228724-4e03c0f33f9c?auto=format&fit=crop&q=80&w=800&h=600"
     },
     {
       id: 'training',
@@ -44,13 +35,13 @@ export default function Services() {
       image: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&q=80&w=800&h=600"
     },
     {
-      id: 'grooming',
-      title: "Pet Grooming",
-      description: "Professional grooming services including bathing, haircuts, and nail trimming. Keep your pet looking and feeling their absolute best.",
-      features: ["Professional Groomers", "Spa Treatments", "Hygiene Care"],
+      id: 'petcare',
+      title: "Pet Care & Daycare",
+      description: "Safe, reliable pet daycare and boarding services with playtime, rest, and attentive care while you are away.",
+      features: ["Safe Boarding", "Playtime Supervision", "Experienced Care Staff"],
       icon: <Scissors className="h-5 w-5" />,
       color: "bg-teal-400 text-white",
-      image: "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&q=80&w=800&h=600"
+      image: "https://images.unsplash.com/photo-1517423440428-a5a00ad493e8?auto=format&fit=crop&q=80&w=800&h=600"
     }
   ];
 
@@ -84,6 +75,11 @@ export default function Services() {
                   alt={service.title} 
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
+                  onError={(event) => {
+                    const target = event.currentTarget;
+                    target.onerror = null;
+                    target.src = 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=800&h=600';
+                  }}
                 />
                 <div className={`absolute top-4 left-4 w-10 h-10 rounded-full ${service.color} flex items-center justify-center shadow-lg`}>
                   {service.icon}
