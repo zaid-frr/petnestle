@@ -70,7 +70,11 @@ export default function Providers() {
         let allUsers: any[] = [];
         try {
           const usersRef = collection(db, "users");
-          const q = query(usersRef, where("role", "in", ["doctor", "trainer", "hospital", "pet_care"]));
+          const q = query(
+            usersRef,
+            where("role", "in", ["doctor", "trainer", "hospital", "pet_care"]),
+            where("isMock", "==", true)
+          );
           const usersSnapshot = await getDocs(q);
           allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           allUsers = allUsers.map((userDoc: any) => {
@@ -187,6 +191,10 @@ export default function Providers() {
   const handleBook = (provider: any) => {
     if (!user) {
       navigate('/login');
+      return;
+    }
+    if (user.role !== 'owner') {
+      showNotification('Only pet owners can book services.', 'error');
       return;
     }
     setSelectedProvider(provider);
@@ -407,9 +415,10 @@ export default function Providers() {
                   <div className="flex gap-2 mb-4">
                     <button 
                       onClick={() => handleBook(provider)}
-                      className="flex-1 py-3 px-4 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors shadow-sm"
+                      disabled={user?.role !== 'owner'}
+                      className={`flex-1 py-3 px-4 ${user?.role === 'owner' ? 'bg-teal-600 hover:bg-teal-700 text-white' : 'bg-slate-300 text-slate-600 cursor-not-allowed'} font-bold rounded-xl transition-colors shadow-sm`}
                     >
-                      Book
+                      {user?.role === 'owner' ? 'Book' : 'Owners Only'}
                     </button>
                     <button 
                       onClick={() => setDetailsModalProvider(provider)}
@@ -657,9 +666,10 @@ export default function Providers() {
                     setDetailsModalProvider(null);
                     handleBook(detailsModalProvider);
                   }}
-                  className="flex-1 py-3 px-4 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors shadow-sm"
+                  disabled={user?.role !== 'owner'}
+                  className={`flex-1 py-3 px-4 ${user?.role === 'owner' ? 'bg-teal-600 hover:bg-teal-700 text-white' : 'bg-slate-300 text-slate-600 cursor-not-allowed'} font-bold rounded-xl transition-colors shadow-sm`}
                 >
-                  Book Appointment
+                  {user?.role === 'owner' ? 'Book Appointment' : 'Owners Only'}
                 </button>
               </div>
             </div>

@@ -7,7 +7,7 @@ const serviceDetailsMap: Record<string, any> = {
   vaccination: { 
     name: "Vaccination", 
     description: "Keep your pets safe from preventable diseases with our comprehensive vaccination programs. Essential for long-term health and immunity.", 
-    price: "₹500", 
+    price: "₹300", 
     duration: "30 mins",
     image: "https://images.unsplash.com/photo-1584813470613-5b1c1cad3d69?auto=format&fit=crop&q=80&w=1200&h=600",
     benefits: [
@@ -33,9 +33,9 @@ const serviceDetailsMap: Record<string, any> = {
   emergency: { 
     name: "Emergency Care", 
     description: "24/7 emergency services for critical situations requiring immediate veterinary attention. Our hospitals are equipped for all urgencies.", 
-    price: "₹1500", 
+    price: "₹300", 
     duration: "Immediate",
-    image: "https://images.unsplash.com/photo-1512636613085-7d01a0f67203?auto=format&fit=crop&q=80&w=1200&h=600",
+    image: "https://images.ctfassets.net/8hq8guzcncfs/4oSOAJBExOLHHGdNLwKoHV/d63d9e19c2f79a198e508b9c5b3638ec/gp-p-v-village-pet-hospital-store-front.jpg?w=3840&fm=webp",
     benefits: [
       "Available 24/7, 365 days a year",
       "State-of-the-art life-saving equipment",
@@ -46,7 +46,7 @@ const serviceDetailsMap: Record<string, any> = {
   training: { 
     name: "Pet Training", 
     description: "Professional training services for obedience, agility, and behavioral correction. Build a stronger bond with your well-behaved pet.", 
-    price: "₹1000", 
+    price: "₹300", 
     duration: "60 mins",
     image: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&q=80&w=1200&h=600",
     benefits: [
@@ -59,7 +59,7 @@ const serviceDetailsMap: Record<string, any> = {
   grooming: { 
     name: "Pet Grooming", 
     description: "Professional grooming services including bathing, haircuts, and nail trimming. Keep your pet looking and feeling their absolute best.", 
-    price: "₹800", 
+    price: "₹300", 
     duration: "90 mins",
     image: "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&q=80&w=1200&h=600",
     benefits: [
@@ -72,7 +72,7 @@ const serviceDetailsMap: Record<string, any> = {
   petcare: {
     name: "Pet Care & Daycare",
     description: "Safe, reliable pet daycare and boarding services with playtime, rest, and attentive care while you are away.",
-    price: "₹800",
+    price: "₹300",
     duration: "Full day",
     image: "https://images.unsplash.com/photo-1598136491881-8042b84bf49b?auto=format&fit=crop&q=80&w=1200&h=600",
     benefits: [

@@ -117,8 +117,16 @@ export default function Profile() {
   }, [user, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const name = e.target.name;
     const value = e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value;
-    setFormData({ ...formData, [e.target.name]: value });
+
+    if (name === 'petDob' && typeof value === 'string') {
+      const petAge = calculateAgeFromDob(value);
+      setFormData({ ...formData, petDob: value, petAge });
+      return;
+    }
+
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,6 +138,28 @@ export default function Profile() {
         setFormData({ ...formData, photoURL: base64String });
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const calculateAgeFromDob = (dob: string) => {
+    const date = new Date(dob);
+    if (!dob || isNaN(date.getTime())) return '';
+    const today = new Date();
+    let age = today.getFullYear() - date.getFullYear();
+    const monthDiff = today.getMonth() - date.getMonth();
+    const dayDiff = today.getDate() - date.getDate();
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+      age -= 1;
+    }
+    return age >= 0 ? age.toString() : '';
+  };
+
+  const handlePriceBlur = () => {
+    if (!user || user.role === 'owner') return;
+    const value = parseFloat(formData.consultationFee);
+    if (isNaN(value) || value < 300) {
+      setFormData((prev) => ({ ...prev, consultationFee: '300' }));
+      showNotification('Minimum provider price is ₹300.', 'error');
     }
   };
 
@@ -252,8 +282,7 @@ export default function Profile() {
         }
       }
 
-      // Update context
-      login({ ...user, ...formData, image: formData.photoURL });
+      await login({ ...user, ...formData, image: formData.photoURL });
       
       setIsEditing(false);
       showNotification('Profile updated successfully!', 'success');
@@ -533,15 +562,20 @@ export default function Profile() {
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Pet Type</label>
                     <div className="relative">
                       <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                      <input
-                        type="text"
+                      <select
                         name="petType"
                         value={formData.petType}
                         onChange={handleChange}
                         disabled={!isEditing}
-                        placeholder="e.g. Dog, Cat"
-                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none disabled:opacity-70 disabled:cursor-not-allowed"
-                      />
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none disabled:opacity-70 disabled:cursor-not-allowed appearance-none"
+                      >
+                        <option value="">Select type</option>
+                        <option value="Dog">Dog</option>
+                        <option value="Cat">Cat</option>
+                        <option value="Rabbit">Rabbit</option>
+                        <option value="Bird">Bird</option>
+                        <option value="Other">Other</option>
+                      </select>
                     </div>
                   </div>
                   <div>
@@ -722,15 +756,20 @@ export default function Profile() {
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Specialization</label>
                     <div className="relative">
                       <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                      <input
-                        type="text"
+                      <select
                         name="specialization"
                         value={formData.specialization}
                         onChange={handleChange}
                         disabled={!isEditing}
-                        placeholder="e.g. General Vet, Surgeon"
-                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none disabled:opacity-70 disabled:cursor-not-allowed"
-                      />
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none disabled:opacity-70 disabled:cursor-not-allowed appearance-none"
+                      >
+                        <option value="">Select specialization</option>
+                        <option value="General Vet">General Vet</option>
+                        <option value="Surgery">Surgery</option>
+                        <option value="Dentistry">Dentistry</option>
+                        <option value="Dermatology">Dermatology</option>
+                        <option value="Emergency Care">Emergency Care</option>
+                      </select>
                     </div>
                   </div>
                   <div>
@@ -754,9 +793,11 @@ export default function Profile() {
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-slate-400">₹</span>
                       <input
                         type="number"
+                        min={300}
                         name="consultationFee"
                         value={formData.consultationFee}
                         onChange={handleChange}
+                        onBlur={handlePriceBlur}
                         disabled={!isEditing}
                         placeholder="e.g. 500"
                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none disabled:opacity-70 disabled:cursor-not-allowed"
@@ -784,15 +825,19 @@ export default function Profile() {
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Training Types</label>
                     <div className="relative">
                       <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                      <input
-                        type="text"
+                      <select
                         name="trainingTypes"
                         value={formData.trainingTypes}
                         onChange={handleChange}
                         disabled={!isEditing}
-                        placeholder="e.g. Obedience, Agility"
-                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none disabled:opacity-70 disabled:cursor-not-allowed"
-                      />
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none disabled:opacity-70 disabled:cursor-not-allowed appearance-none"
+                      >
+                        <option value="">Select training type</option>
+                        <option value="Obedience">Obedience</option>
+                        <option value="Agility">Agility</option>
+                        <option value="Behavioral Training">Behavioral Training</option>
+                        <option value="Puppy Socialization">Puppy Socialization</option>
+                      </select>
                     </div>
                   </div>
                   <div>
@@ -816,9 +861,11 @@ export default function Profile() {
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-slate-400">₹</span>
                       <input
                         type="number"
+                        min={300}
                         name="consultationFee"
                         value={formData.consultationFee}
                         onChange={handleChange}
+                        onBlur={handlePriceBlur}
                         disabled={!isEditing}
                         placeholder="e.g. 500"
                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none disabled:opacity-70 disabled:cursor-not-allowed"
@@ -851,9 +898,11 @@ export default function Profile() {
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-slate-400">₹</span>
                       <input
                         type="number"
+                        min={300}
                         name="consultationFee"
                         value={formData.consultationFee}
                         onChange={handleChange}
+                        onBlur={handlePriceBlur}
                         disabled={!isEditing}
                         placeholder="e.g. 1000"
                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none disabled:opacity-70 disabled:cursor-not-allowed"
@@ -900,9 +949,11 @@ export default function Profile() {
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-slate-400">₹</span>
                       <input
                         type="number"
+                        min={300}
                         name="consultationFee"
                         value={formData.consultationFee}
                         onChange={handleChange}
+                        onBlur={handlePriceBlur}
                         disabled={!isEditing}
                         placeholder="e.g. 300"
                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none disabled:opacity-70 disabled:cursor-not-allowed"

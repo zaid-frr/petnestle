@@ -3,7 +3,7 @@ import { auth, db } from '../firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-export type Role = 'owner' | 'doctor' | 'trainer' | 'hospital' | 'admin';
+export type Role = 'owner' | 'doctor' | 'trainer' | 'hospital' | 'pet_care' | 'admin';
 
 export interface User {
   uid?: string;

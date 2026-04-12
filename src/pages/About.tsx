@@ -166,7 +166,6 @@ export default function About() {
                 )}
               </div>
               <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">{member.name}</h3>
-              <p className="text-teal-600 dark:text-teal-400 font-medium mt-2">{member.role}</p>
             </div>
           ))}
         </div>

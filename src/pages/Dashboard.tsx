@@ -319,7 +319,9 @@ export default function Dashboard() {
     }
 
     if (detailView === 'Total Users' || detailView === 'Active Providers') {
-      const filteredUsers = detailView === 'Active Providers' ? allUsers.filter(u => u.role !== 'owner' && u.role !== 'admin') : allUsers;
+      const filteredUsers = detailView === 'Active Providers'
+        ? allUsers.filter(u => u.role !== 'owner' && u.role !== 'admin' && u.isMock)
+        : allUsers;
       return (
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
           <div className="overflow-x-auto">

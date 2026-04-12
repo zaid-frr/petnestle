@@ -23,7 +23,7 @@ export default function Services() {
       features: ["24/7 Availability", "Critical Care", "Immediate Response"],
       icon: <Ambulance className="h-5 w-5" />,
       color: "bg-teal-400 text-white",
-      image: "https://images.unsplash.com/photo-1556228724-4e03c0f33f9c?auto=format&fit=crop&q=80&w=800&h=600"
+      image: "https://images.ctfassets.net/8hq8guzcncfs/4oSOAJBExOLHHGdNLwKoHV/d63d9e19c2f79a198e508b9c5b3638ec/gp-p-v-village-pet-hospital-store-front.jpg?w=3840&fm=webp"
     },
     {
       id: 'training',
