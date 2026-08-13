@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { Send, Bot, User, Loader2, Sparkles, Activity, Stethoscope, Apple } from "lucide-react";
 import Markdown from "react-markdown";
+import { useChatMemory } from "../context/ChatMemoryContext";
 
 interface Message {
   id: string;
@@ -9,13 +10,8 @@ interface Message {
 }
 
 export default function Chatbot() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      text: "Hello! I'm the PetNestle AI Assistant powered by Gemini. How can I help you with your pet today?",
-      sender: "bot",
-    },
-  ]);
+  const { chats, activeChatId, createChat, setActiveChat, renameChat, deleteChat, addMessageToActive, getActiveMessages } = useChatMemory();
+  const messages = getActiveMessages();
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -33,13 +29,10 @@ export default function Chatbot() {
     const textToSend = predefinedText || input;
     if (!textToSend.trim()) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: textToSend,
-      sender: "user",
-    };
+    const userMessage: Message = { id: Date.now().toString(), text: textToSend, sender: "user" };
 
-    setMessages((prev) => [...prev, userMessage]);
+    // persist via context (active chat)
+    addMessageToActive(userMessage);
     if (!predefinedText) setInput("");
     setIsLoading(true);
 
@@ -54,10 +47,7 @@ export default function Chatbot() {
         }));
 
       // Add the new user message to history
-      rawHistory.push({
-        role: "user",
-        text: textToSend
-      });
+      rawHistory.push({ role: "user", text: textToSend });
 
       // Collapse consecutive messages from the same role to prevent 400 errors
       const history: any[] = [];
@@ -92,14 +82,7 @@ export default function Chatbot() {
 
       const data = await res.json();
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          text: data.text || "Sorry, I couldn't process that.",
-          sender: "bot",
-        },
-      ]);
+      addMessageToActive({ id: (Date.now() + 1).toString(), text: data.text || "Sorry, I couldn't process that.", sender: "bot" });
     } catch (error: any) {
       console.error("Gemini API Error:", error);
       
@@ -109,14 +92,7 @@ export default function Chatbot() {
         errorMessage = "Configuration Error: The Gemini API Key is missing. If you are on Vercel, please make sure you added GEMINI_API_KEY to your Environment Variables and **you must trigger a new deployment** for it to take effect.";
       }
       
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          text: errorMessage,
-          sender: "bot",
-        },
-      ]);
+      addMessageToActive({ id: (Date.now() + 1).toString(), text: errorMessage, sender: "bot" });
     } finally {
       setIsLoading(false);
     }
@@ -130,25 +106,57 @@ export default function Chatbot() {
 
   return (
     <div className="py-12 bg-gradient-to-br from-indigo-50 via-white to-teal-50 dark:from-slate-900 dark:via-slate-800 dark:to-teal-950 min-h-[calc(100vh-4rem)] flex flex-col transition-colors duration-200">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-grow flex flex-col">
-        <div className="text-center mb-8 flex flex-col items-center">
-          <div className="relative mb-4">
-            <div className="absolute inset-0 bg-teal-400 blur-xl opacity-20 rounded-full"></div>
-            <img 
-              src="https://images.unsplash.com/photo-1535295972055-1c762f4483e5?auto=format&fit=crop&q=80&w=200&h=200" 
-              alt="AI Robot Pet" 
-              className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-slate-800 shadow-lg relative z-10"
-              referrerPolicy="no-referrer"
-            />
-            <div className="absolute bottom-0 right-0 bg-teal-500 rounded-full p-1.5 border-2 border-white dark:border-slate-800 z-20">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-grow flex gap-6">
+        {/* Sidebar */}
+        <aside className="w-72 bg-white/90 dark:bg-slate-900/90 rounded-2xl shadow-md border border-white/20 dark:border-slate-700 p-4 flex flex-col h-[calc(100vh-6rem)]">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-bold">Chats</h2>
+            <button
+              onClick={() => createChat()}
+              className="text-sm px-2 py-1 bg-indigo-600 text-white rounded-md"
+            >
+              New
+            </button>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">AI Pet Assistant</h1>
-          <p className="text-slate-600 dark:text-slate-400">Powered by Google Gemini</p>
-        </div>
 
-        <div className="flex-grow bg-white/80 dark:bg-slate-800/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 dark:border-slate-700 flex flex-col overflow-hidden h-[600px]">
+          <div className="flex-1 overflow-y-auto space-y-2">
+            {chats.map((chat) => {
+              const last = chat.messages[chat.messages.length - 1]?.text || "";
+              const isActive = chat.id === activeChatId;
+              return (
+                <div key={chat.id} className={`p-2 rounded-md cursor-pointer ${isActive ? "bg-indigo-50 dark:bg-indigo-900/30" : "hover:bg-slate-50 dark:hover:bg-slate-800/60"}`}>
+                  <div className="flex items-center justify-between">
+                    <div onClick={() => setActiveChat(chat.id)} className="flex-1 pr-2">
+                      <div className="font-medium text-sm">{chat.name}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{last}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => { const n = prompt('Rename chat', chat.name); if (n) renameChat(chat.id, n); }} className="text-xs text-slate-400 hover:text-slate-600">Rename</button>
+                      <button onClick={() => { if (confirm('Delete this chat?')) deleteChat(chat.id); }} className="text-xs text-red-500">Del</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </aside>
+
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col">
+          <div className="text-center mb-4 flex flex-col items-center">
+            <div className="relative mb-2">
+              <img 
+                src="https://images.unsplash.com/photo-1535295972055-1c762f4483e5?auto=format&fit=crop&q=80&w=200&h=200" 
+                alt="AI Robot Pet" 
+                className="w-20 h-20 rounded-full object-cover border-4 border-white dark:border-slate-800 shadow-lg relative z-10"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">AI Pet Assistant</h1>
+            <p className="text-slate-600 dark:text-slate-400 text-sm">{chats.find(c => c.id === activeChatId)?.name || 'New Chat'}</p>
+          </div>
+
+          <div className="flex-1 bg-white/80 dark:bg-slate-800/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 dark:border-slate-700 flex flex-col overflow-hidden h-[600px]">
           {/* Chat Messages */}
           <div className="flex-grow overflow-y-auto p-6 space-y-6">
             {messages.map((msg) => (
@@ -206,6 +214,27 @@ export default function Chatbot() {
               ))}
             </div>
           )}
+
+          {/* Input Area */}
+          <div className="p-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-t border-slate-100 dark:border-slate-700">
+            <form onSubmit={(e) => handleSend(e)} className="flex gap-3 max-w-4xl mx-auto">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask PetNestle about your pet..."
+                className="flex-grow px-6 py-4 rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
+              />
+              <button
+                type="submit"
+                disabled={isLoading || !input.trim()}
+                className="bg-indigo-600 text-white p-4 rounded-full hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+              >
+                <Send className="h-5 w-5" />
+              </button>
+            </form>
+          </div>
+          </div>
 
           {/* Input Area */}
           <div className="p-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-t border-slate-100 dark:border-slate-700">

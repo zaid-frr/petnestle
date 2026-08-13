@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import { ChatMemoryProvider } from "./context/ChatMemoryContext";
 import Layout from "./components/Layout";
 import Home from "./pages/Home";
 import About from "./pages/About";
@@ -24,26 +25,28 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <NotificationProvider>
-        <Router>
-          <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Home />} />
-              <Route path="about" element={<About />} />
-              <Route path="services" element={<Services />} />
-              <Route path="services/:serviceId/details" element={<ServiceDetails />} />
-              <Route path="providers/:serviceId" element={<Providers />} />
-              <Route path="tips" element={<Tips />} />
-              <Route path="chatbot" element={<Chatbot />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="contact" element={<Contact />} />
-              <Route path="login" element={<Login />} />
-              <Route path="register" element={<Register />} />
-            </Route>
-          </Routes>
-        </Router>
-      </NotificationProvider>
+      <ChatMemoryProvider>
+        <NotificationProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Home />} />
+                <Route path="about" element={<About />} />
+                <Route path="services" element={<Services />} />
+                <Route path="services/:serviceId/details" element={<ServiceDetails />} />
+                <Route path="providers/:serviceId" element={<Providers />} />
+                <Route path="tips" element={<Tips />} />
+                <Route path="chatbot" element={<Chatbot />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="contact" element={<Contact />} />
+                <Route path="login" element={<Login />} />
+                <Route path="register" element={<Register />} />
+              </Route>
+            </Routes>
+          </Router>
+        </NotificationProvider>
+      </ChatMemoryProvider>
     </AuthProvider>
   );
 }
