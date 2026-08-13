@@ -6,11 +6,13 @@ Professional pricing structure and customizable proposal template for selling Pe
 
 ## 📊 Pricing Models
 
+**Currency Note:** All prices are available in USD ($) or INR (₹). Exchange rate: 1 USD ≈ 83 INR. Please select your preferred currency when discussing pricing.
+
 ### Model 1: One-Time Custom Build (Recommended for Agencies)
 
 **Best For:** Agencies, boutique clients, fully customized implementations
 
-#### Base Package: $2,500 - $5,000
+#### Base Package: $2,500 USD / ₹2,07,500 INR
 - ✅ Full deployment (Vercel + Firebase)
 - ✅ Custom branding (colors, logo, domain)
 - ✅ Basic customization (text, images)
@@ -18,7 +20,7 @@ Professional pricing structure and customizable proposal template for selling Pe
 - ✅ Initial training (2 hours)
 - ✅ Documentation
 
-#### Premium Package: $5,000 - $10,000
+#### Premium Package: $5,000 USD / ₹4,15,000 INR
 - ✅ Everything in Base
 - ✅ Advanced customization (custom pages, features)
 - ✅ Custom domain setup
@@ -27,7 +29,7 @@ Professional pricing structure and customizable proposal template for selling Pe
 - ✅ 30-day support included
 - ✅ Performance tuning
 
-#### Enterprise Package: $10,000 - $20,000+
+#### Enterprise Package: $10,000 USD / ₹8,30,000 INR
 - ✅ Everything in Premium
 - ✅ Custom feature development
 - ✅ White-label solution
@@ -43,7 +45,7 @@ Professional pricing structure and customizable proposal template for selling Pe
 
 **Best For:** Long-term clients, ongoing support & updates
 
-#### Starter Plan: $299/month
+#### Starter Plan: $299/month USD / ₹24,900/month INR
 - ✅ Basic deployment & hosting
 - ✅ Email support (24-48 hour response)
 - ✅ Monthly updates
@@ -51,7 +53,7 @@ Professional pricing structure and customizable proposal template for selling Pe
 - ✅ Up to 1,000 users
 - ❌ Custom features
 
-#### Professional Plan: $599/month
+#### Professional Plan: $599/month USD / ₹49,900/month INR
 - ✅ Everything in Starter
 - ✅ Priority email support (4-hour response)
 - ✅ Monthly feature updates
@@ -60,7 +62,7 @@ Professional pricing structure and customizable proposal template for selling Pe
 - ✅ 2 minor custom tweaks/month
 - ✅ Performance optimization
 
-#### Enterprise Plan: $1,499/month+
+#### Enterprise Plan: $1,499/month USD / ₹1,24,900/month INR+
 - ✅ Everything in Professional
 - ✅ 24/7 phone & email support
 - ✅ Weekly feature updates
@@ -88,27 +90,27 @@ Professional pricing structure and customizable proposal template for selling Pe
 ## 💰 Add-On Services & Upgrades
 
 ### Custom Development
-| Service | Price | Duration |
-|---------|-------|----------|
-| Additional custom page | $500-$1,500 | 2-5 days |
-| Integration (payment, SMS, etc.) | $1,000-$3,000 | 2-10 days |
-| Database enhancement/optimization | $800-$2,000 | 2-3 days |
-| Advanced security audit | $600-$1,200 | 1-2 days |
-| Performance optimization | $500-$1,500 | 1-3 days |
+| Service | Price (USD) | Price (INR) | Duration |
+|---------|------|---|---|
+| Additional custom page | $500-$1,500 | ₹41,500-₹1,24,500 | 2-5 days |
+| Integration (payment, SMS, etc.) | $1,000-$3,000 | ₹83,000-₹2,49,000 | 2-10 days |
+| Database enhancement/optimization | $800-$2,000 | ₹66,400-₹1,66,000 | 2-3 days |
+| Advanced security audit | $600-$1,200 | ₹49,800-₹99,600 | 1-2 days |
+| Performance optimization | $500-$1,500 | ₹41,500-₹1,24,500 | 1-3 days |
 
 ### Training & Documentation
-| Service | Price |
-|---------|-------|
-| Extended training (per hour) | $150-$250 |
-| Video documentation suite | $1,000-$2,500 |
-| Staff onboarding workshop | $2,000-$5,000 |
+| Service | Price (USD) | Price (INR) |
+|---------|------|---|
+| Extended training (per hour) | $150-$250 | ₹12,500-₹20,750 |
+| Video documentation suite | $1,000-$2,500 | ₹83,000-₹2,07,500 |
+| Staff onboarding workshop | $2,000-$5,000 | ₹1,66,000-₹4,15,000 |
 
 ### Support Plans
-| Plan | Response Time | Up-time SLA | Price |
-|------|---|---|---|
-| Email Support | 24-48 hours | 99% | Included |
-| Priority Support | 4 hours | 99.5% | +$199/month |
-| Premium Support | 1 hour / 24/7 | 99.9% | +$499/month |
+| Plan | Response Time | Up-time SLA | Price (USD) | Price (INR) |
+|------|---|---|---|---|
+| Email Support | 24-48 hours | 99% | Included | Included |
+| Priority Support | 4 hours | 99.5% | +$199/month | +₹16,500/month |
+| Premium Support | 1 hour / 24/7 | 99.9% | +$499/month | +₹41,500/month |
 
 ---
 
@@ -123,8 +125,8 @@ Professional pricing structure and customizable proposal template for selling Pe
 | **API Integrations** | 0 | Limited | Full |
 | **Support** | Email | Email + Slack | 24/7 Phone + Dedicated |
 | **Uptime SLA** | 99% | 99.5% | 99.9% |
-| **Initial Cost** | $2,500 | $5,000 | $10,000+ |
-| **Monthly Cost** | $299 | $599 | $1,499+ |
+| **Initial Cost** | $2,500 / ₹2,07,500 | $5,000 / ₹4,15,000 | $10,000+ / ₹8,30,000+ |
+| **Monthly Cost** | $299 / ₹24,900 | $599 / ₹49,900 | $1,499+ / ₹1,24,900+ |
 
 ---
 
@@ -222,14 +224,14 @@ PRICING & PAYMENT
 
 ### Service Package: [SELECT ONE]
 
-[ ] STARTER PACKAGE                               $2,500
+[ ] STARTER PACKAGE                               $2,500 / ₹2,07,500
     - Basic setup and deployment
     - Standard customization
     - 2-hour training
     - 30-day support
     - Timeline: 2-3 weeks
 
-[ ] PROFESSIONAL PACKAGE                          $5,000
+[ ] PROFESSIONAL PACKAGE                          $5,000 / ₹4,15,000
     - Advanced customization
     - Custom feature (1)
     - 4-hour training
@@ -237,7 +239,7 @@ PRICING & PAYMENT
     - Performance optimization
     - Timeline: 3-4 weeks
 
-[ ] ENTERPRISE PACKAGE                            $10,000+
+[ ] ENTERPRISE PACKAGE                            $10,000+ / ₹8,30,000+
     - Full white-label solution
     - Custom features (unlimited)
     - 8-hour training
@@ -247,18 +249,18 @@ PRICING & PAYMENT
     - Timeline: 4-6 weeks
 
 ### Add-On Services (Optional)
-[ ] Extended Support (+3 months)                   +$600
-[ ] Advanced Security Audit                        +$1,200
-[ ] Staff Training Workshop                        +$2,000
-[ ] Custom Integration Development                +$1,500
-[ ] Video Training Package                         +$1,500
+[ ] Extended Support (+3 months)                   +$600 / +₹49,800
+[ ] Advanced Security Audit                        +$1,200 / +₹99,600
+[ ] Staff Training Workshop                        +$2,000 / +₹1,66,000
+[ ] Custom Integration Development                +$1,500 / +₹1,24,500
+[ ] Video Training Package                         +$1,500 / +₹1,24,500
 
 ### Payment Terms
 - 50% deposit upon signing this proposal
 - 50% due upon completion & launch
-- All prices in USD
+- All prices in USD or INR (your choice)
 - Includes all standard hosting/domain for first year
-- Annual renewal: $300-$500 (depending on package)
+- Annual renewal: $300-$500 / ₹24,900-₹41,500 (depending on package)
 
 ### Total Project Cost: $[X]
 
@@ -522,16 +524,17 @@ Best regards,
 - **Bundle Discount:** 10% off if combining setup + annual support
 - **Referral Discount:** 10-15% off for referred clients
 - **Non-Profit Discount:** 20% off for verified non-profits
+- **Local Currency (INR) Discount:** 5% off when paying in INR (for Indian clients)
 
 ### Timeline Flexibility
-- **Expedited Delivery:** Add $1,000-$2,000 for 50% faster timeline
+- **Expedited Delivery:** Add $1,000-$2,000 / ₹83,000-₹1,66,000 for 50% faster timeline
 - **Delayed Start:** Reduce price slightly if flexible on start date
 - **Phased Approach:** Split into Phase 1 (MVP) + Phase 2 (Advanced)
 
 ### Scope Flexibility
 - **Start Small:** Offer reduced price for "lite" version
 - **Expand Later:** Plan for future add-ons/upgrades
-- **Pilot Program:** Discounted rate for 3-month pilot, full price after
+- **Pilot Program:** Discounted rate for 3-month pilot, full price after (20-30% discount)
 
 ### Red Flags to Avoid
 ❌ Don't significantly discount for "exposure" or "portfolio project"
@@ -558,8 +561,8 @@ Track your proposals and conversions:
 
 ### For Marketing/Web Agencies Reselling PetNestle
 
-**Agency Reseller Package: $1,500 - $3,000** (per deployment)
-- Agency markup: 50-100% (charge clients $3,000-$5,000)
+**Agency Reseller Package: $1,500 - $3,000 / ₹1,24,500 - ₹2,49,000** (per deployment)
+- Agency markup: 50-100% (charge clients $3,000-$5,000 / ₹2,49,000-₹4,15,000)
 - White-label option (remove company branding)
 - Training for your team
 - Priority support
