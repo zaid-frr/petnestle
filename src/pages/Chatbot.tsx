@@ -1,27 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Loader2, Sparkles, Activity, Stethoscope, Apple } from "lucide-react";
-import { GoogleGenAI } from "@google/genai";
 import Markdown from "react-markdown";
-
-// Lazy initialize to prevent app crash if env var is missing
-let aiClient: GoogleGenAI | null = null;
-const getAIClient = () => {
-  if (!aiClient) {
-    const env = import.meta.env as Record<string, string | undefined>;
-    const apiKey =
-      env.GEMINI_API_KEY ||
-      env.VITE_GEMINI_API_KEY ||
-      process.env.GEMINI_API_KEY ||
-      process.env.VITE_GEMINI_API_KEY;
-
-    if (!apiKey || apiKey === 'undefined' || apiKey === 'null' || apiKey === '') {
-      console.error("GEMINI_API_KEY is missing. Chatbot will not work.");
-      return null;
-    }
-    aiClient = new GoogleGenAI({ apiKey });
-  }
-  return aiClient;
-};
 
 interface Message {
   id: string;
@@ -65,11 +44,6 @@ export default function Chatbot() {
     setIsLoading(true);
 
     try {
-      const client = getAIClient();
-      if (!client) {
-        throw new Error("API_KEY_MISSING");
-      }
-      
       // Format history for Gemini API
       // We skip the first message (the bot's greeting)
       const rawHistory = messages
@@ -105,19 +79,24 @@ export default function Chatbot() {
         history.push({ role: currentRole, parts: [{ text: currentText }] });
       }
 
-      const response = await client.models.generateContent({
-        model: 'gemini-3.1-flash-lite-preview',
-        contents: history,
-        config: {
-          systemInstruction: "You are a helpful veterinary and pet care assistant for PetNestle. Answer questions about pet health, training, and general care. Keep your answers concise, friendly, and helpful. Always advise users to consult a real vet for serious medical emergencies. Use markdown for formatting if needed."
-        }
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history }),
       });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'GENERATION_FAILED');
+      }
+
+      const data = await res.json();
 
       setMessages((prev) => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
-          text: response.text || "Sorry, I couldn't process that.",
+          text: data.text || "Sorry, I couldn't process that.",
           sender: "bot",
         },
       ]);
