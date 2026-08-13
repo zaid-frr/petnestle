@@ -71,7 +71,8 @@ export default function Chatbot() {
         history.push({ role: currentRole, parts: [{ text: currentText }] });
       }
 
-      const res = await fetch('/api/chat', {
+      const apiUrl = import.meta.env.DEV ? 'http://localhost:5000/api/chat' : '/api/chat';
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ history }),
