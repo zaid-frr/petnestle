@@ -6,50 +6,66 @@ service cloud.firestore {
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
-    
+
+    function myEmail() {
+      return isAuthenticated() ? request.auth.token.email : null;
+    }
+
     function isAdmin() {
-      return isAuthenticated() && 
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-        (request.auth.token.email == "mominzaid556@gmail.com"));
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     match /users/{userId} {
       allow read: if true;
-      allow create: if true;
-      allow update: if true;
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
     }
 
     match /bookings/{bookingId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+      allow read: if isAuthenticated() &&
+        (resource.data.userEmail == myEmail() ||
+         resource.data.providerEmail == myEmail() ||
+         isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userEmail == myEmail();
+      allow update: if isAuthenticated() &&
+        (resource.data.userEmail == myEmail() ||
+         resource.data.providerEmail == myEmail() ||
+         isAdmin());
+      allow delete: if isAuthenticated() &&
+        (resource.data.userEmail == myEmail() || isAdmin());
     }
 
     match /notifications/{notificationId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && resource.data.userEmail == myEmail();
       allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+      allow update: if isAuthenticated() && resource.data.userEmail == myEmail();
+      allow delete: if isAuthenticated() && resource.data.userEmail == myEmail();
     }
 
     match /pets/{petId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+      allow read: if isAuthenticated() &&
+        (resource.data.ownerEmail == myEmail() || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.ownerEmail == myEmail();
+      allow update: if isAuthenticated() &&
+        (resource.data.ownerEmail == myEmail() || isAdmin());
+      allow delete: if isAuthenticated() &&
+        (resource.data.ownerEmail == myEmail() || isAdmin());
     }
 
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.userEmail == myEmail();
+      allow update: if isAuthenticated() &&
+        (resource.data.userEmail == myEmail() || isAdmin());
+      allow delete: if isAuthenticated() &&
+        (resource.data.userEmail == myEmail() || isAdmin());
     }
 
     match /settings/{settingId} {
