@@ -16,15 +16,26 @@ export default function Chatbot() {
   const [isLoading, setIsLoading] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState<string | null>(null);
   const [renamingText, setRenamingText] = useState("");
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (shouldAutoScroll) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+    const { scrollHeight, scrollTop, clientHeight } = messagesContainerRef.current;
+    // Auto-scroll if user is within 100px of the bottom
+    setShouldAutoScroll(scrollHeight - scrollTop - clientHeight < 100);
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, shouldAutoScroll]);
 
   const handleSend = async (e?: React.FormEvent, predefinedText?: string) => {
     e?.preventDefault();
@@ -201,7 +212,7 @@ export default function Chatbot() {
         </div>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-6">
+        <div className="flex-1 overflow-y-auto p-8 space-y-6" ref={messagesContainerRef} onScroll={handleScroll}>
           {messages.map((msg) => (
             <div
               key={msg.id}
