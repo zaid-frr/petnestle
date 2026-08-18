@@ -316,7 +316,7 @@ systemInstruction: "Your custom instruction here..."
 ## 🤝 Support & Customization
 
 For questions or custom modifications:
-- 📧 Email: contact@petnestle.com
+- 📧 Email: mominzaid556@gmail.com
 - 🐙 GitHub: [zaid-frr/petnestle](https://github.com/zaid-frr/petnestle)
 - 📱 Website: [petnestle.vercel.app](https://petnestle.vercel.app)
 
